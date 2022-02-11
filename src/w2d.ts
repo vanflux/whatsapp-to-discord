@@ -69,39 +69,45 @@ export default class W2D {
           const messageId = this.state.chats[chatId].dcMsgIdAndwaMsgId[buttonInteraction.message.id];
           await buttonInteraction.deferUpdate();
           const waMessage = await Whatsapp.getMessageById(messageId);
-          const profilePictureUrl = waMessage.sender?.profilePicThumbObj?.img;
-          const senderName = waMessage.sender.formattedName;
-          const fileBuffer = await decryptMedia(waMessage);
-          switch(type) {
-            case 'load_animated_sticker': {
-              const fileName = `Sticker_Received_${this.nowDateStr()}.gif`;
-              
-              const start = Date.now();
-              const buf = await Webp2Gif.convert(fileBuffer!);
-              const end = Date.now();
-              console.log('Webp -> Gif conversion time:', end-start, 'output buffer size', buf!.length);
-              
-              const attachment = new MessageAttachment(buf!, fileName);
-              const embed = new MessageEmbed();
-              embed.setAuthor({ iconURL: profilePictureUrl, name: senderName });
-              embed.setColor(waMessage.fromMe ? 'GREEN' : 'GREY');
-              embed.setImage(`attachment://${fileName}`);
-              await buttonInteraction.editReply({ embeds: [embed], files: [attachment], components: [] });
-              break;
-            }
-            case 'load_video': {
-              if (waMessage.mimetype) {
-                const fileExtension = extension(waMessage.mimetype);
-                const fileName = `Video_Received_${this.nowDateStr()}.${fileExtension}`;
-                const attachment = new MessageAttachment(fileBuffer!, fileName);
-                await buttonInteraction.editReply({ embeds: [], files: [attachment], components: [] });
+          if (waMessage) {
+            const profilePictureUrl = waMessage.sender?.profilePicThumbObj?.img;
+            const senderName = waMessage.sender.formattedName;
+            const fileBuffer = await decryptMedia(waMessage);
+            switch(type) {
+              case 'load_animated_sticker': {
+                const fileName = `Sticker_Received_${this.nowDateStr()}.gif`;
+                
+                const start = Date.now();
+                const buf = await Webp2Gif.convert(fileBuffer!);
+                const end = Date.now();
+                console.log('Webp -> Gif conversion time:', end-start, 'output buffer size', buf!.length);
+                
+                const attachment = new MessageAttachment(buf!, fileName);
+                const embed = new MessageEmbed();
+                embed.setAuthor({ iconURL: profilePictureUrl, name: senderName });
+                embed.setColor(waMessage.fromMe ? 'GREEN' : 'GREY');
+                embed.setImage(`attachment://${fileName}`);
+                await buttonInteraction.editReply({ embeds: [embed], files: [attachment], components: [] });
+                break;
               }
-              break;
+              case 'load_video': {
+                if (waMessage.mimetype) {
+                  const fileExtension = extension(waMessage.mimetype);
+                  const fileName = `Video_Received_${this.nowDateStr()}.${fileExtension}`;
+                  const attachment = new MessageAttachment(fileBuffer!, fileName);
+                  await buttonInteraction.editReply({ embeds: [], files: [attachment], components: [] });
+                }
+                break;
+              }
+              default:
+                console.log('Unhandled button interaction', type, messageId);
+                break;
             }
-            default:
-              console.log('Unhandled button interaction', type, messageId);
-              break;
+          } else {
+            await buttonInteraction.editReply('WA Message not found');
           }
+        } else {
+          await buttonInteraction.editReply('WA Chat not found');
         }
       }
     });
@@ -137,7 +143,25 @@ export default class W2D {
     console.log(`[Discord -> Whatsapp] ${chatId}: ${message.content}`);
     this.state.chats[chatId].lastMessageTS = Date.now();
     this.saveCurrentState();
-    await Whatsapp.sendTextMessage(chatId, message.content);
+
+    let contentSent = false;
+
+    for (let attachment of message.attachments.values()) {
+      const { name, contentType, url, description, id } = attachment;
+      const type = contentType?.split('/')[0];
+      switch (type) {
+        case 'image': {
+          const ext = contentType?.split('/')[1];
+          if (await Whatsapp.sendImageMessageByUrl(chatId, `image.${ext}`, url, contentSent ? '' : message.content) != null) {
+            contentSent = true;
+          } else {
+            console.error('Error on send attachment to whatsapp', id, name, contentType, description, url);
+          }
+        }
+      }
+    }
+
+    if (!contentSent) await Whatsapp.sendTextMessage(chatId, message.content);
     message.delete();
   }
 

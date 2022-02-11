@@ -14,7 +14,7 @@ export default class Whatsapp {
       popup: true,
       qrTimeout: 0, //0 means it will wait forever for you to scan the qr code
       
-      headless: false,
+      headless: true,
       ensureHeadfulIntegrity: false,
       useChrome: true,
     });
@@ -30,6 +30,10 @@ export default class Whatsapp {
   
   public static async sendTextMessage(chatId: string, message: string) {
     return await this.client.sendText(chatId as any, message);
+  }
+  
+  public static async sendImageMessageByUrl(chatId: string, fileName: string, imageUrl: string, caption='') {
+    return await this.client.sendImage(chatId as any, imageUrl, fileName, caption);
   }
 
   public static async getLastMessageTimestampByChatId(chatId: string) {
