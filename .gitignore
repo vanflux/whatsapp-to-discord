@@ -1,0 +1,13 @@
+node_modules/
+src/credentials.ts
+state.json
+# @Open/WA files
+_IGNORE*/
+*.data.json
+.node-persist/
+
+# managed
+**.data.json
+**.node-persist**
+**_IGNORE_**
+# end managed
