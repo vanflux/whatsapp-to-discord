@@ -23,6 +23,19 @@ export const Credentials = {
 
 ---
 
+## Problems
+
+- If the integrity check is failing for you, try to disable the headless mode on the file `whatsapp.ts` on `src/bots` folder.
+```typescript
+headless: true,
+```
+to
+```typescript
+headless: false,
+```
+
+---
+
 ## I'm responsible for any damage?
 
 **NO**, use at **your** risk!
