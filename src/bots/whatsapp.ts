@@ -16,7 +16,7 @@ export default class Whatsapp {
       
       headless: true,
       ensureHeadfulIntegrity: false,
-      useChrome: true,
+      useChrome: false,
     });
   }
 
