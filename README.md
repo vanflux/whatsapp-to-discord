@@ -4,7 +4,7 @@ Use Whatsapp through Discord.
 
 ---
 
-## How I use?
+## Usage
 
 - Firstly, ensure that your node version is **16.6.0** or newer with `node -v`.
 - Install image magick and(for windows users) add to the environment path vars.
