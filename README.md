@@ -8,6 +8,7 @@ Use Whatsapp through Discord.
 
 - Firstly, ensure that your node version is **16.6.0** or newer with `node -v`.
 - Install image magick and(for windows users) add to the environment path vars.
+- Install ffmpeg and(for windows users) add to the environment path vars.
 - Create an application and a bot on discord developer website.
 - Create an server for you (**ONLY YOU!!!**).
 - Add the bot to the server as administrator.
