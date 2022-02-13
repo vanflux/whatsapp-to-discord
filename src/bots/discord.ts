@@ -5,11 +5,33 @@ export default class Discord {
 
   public static async connect(token: string) {
     this.client = new Client({
-      intents: [ "GUILDS", "GUILD_MESSAGES", "GUILD_MESSAGE_TYPING", "GUILD_MESSAGE_REACTIONS" ],
+      intents: [
+        "GUILDS",
+        "GUILD_BANS",
+        "GUILD_EMOJIS_AND_STICKERS",
+        "GUILD_INTEGRATIONS",
+        "GUILD_INVITES",
+        "GUILD_MESSAGES",
+        "GUILD_MESSAGE_REACTIONS",
+        "GUILD_MESSAGE_TYPING",
+        "GUILD_SCHEDULED_EVENTS",
+        "GUILD_VOICE_STATES",
+        "GUILD_WEBHOOKS",
+      ],
     });
 
     this.client.on('ready', () => {
-      console.log('Discord client ready!');
+      console.log('[Discord] Client ready!');
+    });
+
+    this.client.on('rateLimit', ({timeout, limit, method, path, route, global}) => {
+      console.log(`[Discord] Rate limit: ` + 
+                  `Timeout=${timeout}, ` +
+                  `Limit=${limit}, ` +
+                  `Method=${method}, ` +
+                  `Path=${path}, ` +
+                  `Route=${route}, ` +
+                  `Global=${global}`);
     });
     
     await this.client.login(token);

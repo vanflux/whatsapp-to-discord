@@ -14,9 +14,10 @@ export default class Whatsapp {
       popup: true,
       qrTimeout: 0, //0 means it will wait forever for you to scan the qr code
       
-      headless: true,
-      ensureHeadfulIntegrity: false,
+      headless: false,
       useChrome: false,
+      useStealth: true,
+      restartOnCrash: true,
     });
   }
 

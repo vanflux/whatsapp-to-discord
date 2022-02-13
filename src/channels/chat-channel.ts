@@ -1,12 +1,12 @@
 import { decryptMedia, Message as WaMessage, MessageTypes } from "@open-wa/wa-automate";
-import { ButtonInteraction, MessageActionRow, MessageAttachment, MessageButton, MessageEmbed, Message as DcMessage, TextChannel, Interaction, Channel } from "discord.js"
+import { ButtonInteraction, MessageActionRow, MessageAttachment, MessageButton, MessageEmbed, Message as DcMessage, TextChannel, Interaction, Channel, ReplyOptions } from "discord.js"
 import { extension } from "mime-types";
 import FileConverter from "../converters/file-converter";
 import Webp2Gif from "../converters/webp-2-gif";
 import Discord from "../bots/discord";
 import Whatsapp from "../bots/whatsapp";
-import { ChannelTypes } from "discord.js/typings/enums";
 import EventEmitter from "events";
+import StaticMaps from "staticmaps";
 
 const oldMessagesLimit = 5;
 
@@ -14,13 +14,14 @@ export interface ChatData {
   waChatId: string;
   channelId?: string;
   lastMessageTS?: number;
-  dcMsgIdAndWaMsgId?: {[dcMsgId: string]: string};
+  dcMsgIdAndWaMsgId?: {dcMsgId: string, waMsgId: string}[];
 };
 
 export default class ChatChannel extends EventEmitter {
   private guildId: string;
   private channel: TextChannel|undefined;
   private channelName: string|undefined;
+  private channelTopic: string|undefined;
   private chatData: ChatData;
   private ready = false;
   
@@ -40,14 +41,16 @@ export default class ChatChannel extends EventEmitter {
     this.chatData = chatData;
     if (this.waChatId === undefined) throw new Error('WaChatId is required');
     if (this.lastMessageTS === undefined) this.lastMessageTS = 0;
-    if (this.dcMsgIdAndWaMsgId === undefined) this.dcMsgIdAndWaMsgId = {};
+    if (this.dcMsgIdAndWaMsgId === undefined) this.dcMsgIdAndWaMsgId = [];
   }
 
   public async setup() {
     if (this.ready) return;
 
     const chat = await Whatsapp.getChatById(this.waChatId);
-    this.channelName = chat.name || chat.formattedTitle;
+    this.channelName = this.sanitizeChatName(chat.name || chat.formattedTitle);
+    // @ts-ignore
+    this.channelTopic = this.sanitizeChatDescription(chat.groupMetadata?.desc);
 
     if (this.channelId) await this.loadExistentChannel();
     if (!this.channelId) await this.createNewChannel();
@@ -57,7 +60,6 @@ export default class ChatChannel extends EventEmitter {
       Discord.client.on('messageCreate', dcMessage => this.handleDiscordMessageCreate(dcMessage));
       Discord.client.on('interactionCreate', interaction => this.handleDiscordInteractionCreate(interaction));
       Discord.client.on('channelDelete', channel => this.handleDiscordChannelDelete(channel));
-      Discord.client.on('channelUpdate', (oldChannel, newChannel) => this.handleDiscordChannelUpdate(oldChannel, newChannel));
       this.ready = true;
       this.emit('ready');
     } else {
@@ -90,6 +92,7 @@ export default class ChatChannel extends EventEmitter {
     this.channel = channel;
     this.channelId = channel.id;
     this.channelName = channel.name;
+    this.channelTopic = channel.topic || undefined;
     if (changed) this.emit('channel changed', channel);
     this.emit('data changed', this.chatData);
   }
@@ -101,16 +104,16 @@ export default class ChatChannel extends EventEmitter {
       this.sendNonReceivedMessages();
     } else {
       this.channelId = undefined;
-      this.dcMsgIdAndWaMsgId = {};
+      this.dcMsgIdAndWaMsgId = [];
       this.lastMessageTS = 0;
       this.emit('data changed', this.chatData);
     }
   }
 
   private async createNewChannel() {
-    const channelCreated = await Discord.createChannel(this.guildId, this.channelName || 'unnamed-chat', { type: 'GUILD_TEXT' }) as TextChannel;
+    const channelCreated = await Discord.createChannel(this.guildId, this.channelName!, { type: 'GUILD_TEXT', topic: this.channelTopic }) as TextChannel;
     if (channelCreated) {
-      this.dcMsgIdAndWaMsgId = {};
+      this.dcMsgIdAndWaMsgId = [];
       this.lastMessageTS = 0;
       this.emit('data changed', this.chatData);
       this.setChannel(channelCreated);
@@ -134,15 +137,16 @@ export default class ChatChannel extends EventEmitter {
 
     const buttonInteraction = interaction as ButtonInteraction;
     const type = buttonInteraction.customId;
-    const messageId = this.dcMsgIdAndWaMsgId![buttonInteraction.message.id];
+    const messageId = this.dcMsgIdAndWaMsgId!.find(x => x.dcMsgId === buttonInteraction.message.id)?.waMsgId;
+    console.log(`[Discord Interaction] DcMessageId=${buttonInteraction.message.id}, WaMessageId=${messageId}`);
     await buttonInteraction.deferUpdate();
-    const waMessage = await Whatsapp.getMessageById(messageId);
+    const waMessage = await Whatsapp.getMessageById(messageId!);
     if (waMessage) {
       const profilePictureUrl = waMessage.sender?.profilePicThumbObj?.img;
       const senderName = waMessage.sender.formattedName;
-      const fileBuffer = await decryptMedia(waMessage);
       switch(type) {
         case 'load_animated_sticker': {
+          const fileBuffer = await decryptMedia(waMessage);
           const fileName = `Sticker_Received_${this.nowDateStr()}.gif`;
           
           const start = Date.now();
@@ -160,11 +164,35 @@ export default class ChatChannel extends EventEmitter {
         }
         case 'load_video': {
           if (waMessage.mimetype) {
+            const fileBuffer = await decryptMedia(waMessage);
             const fileExtension = extension(waMessage.mimetype);
             const fileName = `Video_Received_${this.nowDateStr()}.${fileExtension}`;
             const attachment = new MessageAttachment(fileBuffer!, fileName);
             await buttonInteraction.editReply({ embeds: [], files: [attachment], components: [] });
           }
+          break;
+        }
+        case 'load_document': {
+          if (waMessage.mimetype) {
+            const fileBuffer = await decryptMedia(waMessage);
+            const fileName = buttonInteraction.message?.embeds[0]?.fields?.find(field => field.name === 'Filename')?.value || 'unknown';
+            const attachment = new MessageAttachment(fileBuffer!, fileName);
+            await buttonInteraction.editReply({ embeds: [], files: [attachment], components: [] });
+          }
+          break;
+        }
+        case 'show_location': {
+          await this.updateLocation(waMessage, buttonInteraction, 17);
+          break;
+        }
+        case 'location_zoom_out': {
+          const zoom = parseInt(buttonInteraction.message?.embeds[0]?.fields?.find(field => field.name === 'Zoom')?.value || '17') - 1;
+          await this.updateLocation(waMessage, buttonInteraction, zoom);
+          break;
+        }
+        case 'location_zoom_in': {
+          const zoom = parseInt(buttonInteraction.message?.embeds[0]?.fields?.find(field => field.name === 'Zoom')?.value || '17') + 1;
+          await this.updateLocation(waMessage, buttonInteraction, zoom);
           break;
         }
         default:
@@ -176,19 +204,42 @@ export default class ChatChannel extends EventEmitter {
     }
   }
 
+  private async updateLocation(waMessage: WaMessage, buttonInteraction: ButtonInteraction, zoom: number) {
+    const lat = parseFloat(waMessage.lat || '0');
+    const lng = parseFloat(waMessage.lng || '0');
+
+    const mapFileName = 'map.png';
+    const options = { width: 450, height: 300 };
+    const map = new StaticMaps(options);
+    const center = [lng, lat];
+    map.addMarker({
+      width: 48,
+      height: 48,
+      coord: [lng, lat],
+      img: 'marker.png',
+    })
+
+    await map.render(center, zoom);
+    const mapImageBuf = await map.image.buffer('png');
+    const attachment = new MessageAttachment(mapImageBuf, mapFileName);
+
+    const embed = new MessageEmbed();
+    embed.addField('Lat', `${lat}`, true);
+    embed.addField('Lng', `${lng}`, true);
+    embed.addField('Zoom', `${zoom}`, true);
+    embed.addField('Maps', `https://www.google.com.br/maps/dir//${lat},${lng}/@${lat},${lng},${zoom}z`, false);
+    embed.setImage(`attachment://${mapFileName}`);
+    
+    const btnZoomOut = new MessageButton({ customId: 'location_zoom_out', style: 'PRIMARY', label: 'Zoom Out' });
+    const btnZoomIn = new MessageButton({ customId: 'location_zoom_in', style: 'PRIMARY', label: 'Zoom In' });
+    const component = new MessageActionRow({ components: [btnZoomOut, btnZoomIn] });
+
+    await buttonInteraction.editReply({ embeds: [embed], files: [attachment], components: [component] });
+  }
+
   private async handleDiscordChannelDelete(channel: Channel) {
     if (channel.id !== this.channelId) return;
     await this.createNewChannel();
-  }
-  
-  private async handleDiscordChannelUpdate(oldChannel: Channel, newChannel: Channel) {
-    if (oldChannel.id !== this.channelId) return;
-    if (oldChannel.type !== 'GUILD_TEXT') return;
-    if (newChannel.type === 'GUILD_NEWS') await this.channel?.setType({ 'GUILD_TEXT': ChannelTypes.GUILD_TEXT }, 'WA Chat cannot be news channel');
-    const newTextChannel = newChannel as TextChannel;
-    if (this.channelName && newTextChannel.name != this.channelName) {
-      await this.channel?.setName(this.channelName);
-    }
   }
 
   private async sendWhatsappMessage(dcMessage: DcMessage) {
@@ -218,7 +269,7 @@ export default class ChatChannel extends EventEmitter {
   }
 
   private async receiveWhatsappChatMessage(waMessage: WaMessage) {
-    const { id, chatId, sender, fromMe, text, t, type, mimetype, isAnimated, body } = waMessage;
+    const { id, chatId, sender, fromMe, text, t, type, mimetype, isAnimated, body, filename: rawFileName, quotedMsg } = waMessage;
     console.log(`[Whatsapp -> Discord] ${chatId}: ${text}`);
     const senderName = sender.formattedName;
     this.lastMessageTS = t * 1000;
@@ -229,21 +280,26 @@ export default class ChatChannel extends EventEmitter {
     const fileExtension = mimetype ? extension(mimetype) : undefined;
     const hasFile = mimetype && fileFormat;
     const fileBuffer = hasFile ? await decryptMedia(waMessage) : undefined;
-    const originalFileName = hasFile ? `${t}.${extension(mimetype)}` : undefined;
+    const fileSize = hasFile ? (fileBuffer ? fileBuffer.length : 0) : undefined;
+    const fileIsOverLimit = hasFile ? fileSize! > 8 * 1000 * 1000 : false;
+
+    const dcRefMessage = quotedMsg ? this.dcMsgIdAndWaMsgId?.find(x => x.waMsgId === quotedMsg.id)?.dcMsgId : undefined;
 
     const embeds: MessageEmbed[] = [];
     const files: MessageAttachment[] = [];
     const components: MessageActionRow[] = [];
+    const reply: ReplyOptions|undefined = dcRefMessage ? { messageReference: dcRefMessage } : undefined;
 
     const embed = new MessageEmbed();
     embed.setAuthor({ iconURL: profilePictureUrl, name: senderName });
     embed.setColor(fromMe ? 'GREEN' : 'GREY');
     switch (type) {
-      case MessageTypes.TEXT:
+      case MessageTypes.TEXT: {
         embed.setDescription(text);
         embeds.push(embed);
         break;
-      case MessageTypes.AUDIO:
+      }
+      case MessageTypes.AUDIO: {
         if (hasFile) {
           const fileName = `Audio_Received_${this.nowDateStr()}.mp3`;
           const buf = await FileConverter.convert(fileBuffer!, fileFormat, 'mp3');
@@ -251,10 +307,18 @@ export default class ChatChannel extends EventEmitter {
           files.push(attachment);
         }
         break;
-      case MessageTypes.DOCUMENT:
-        console.log('receive whatsapp message document');
+      }
+      case MessageTypes.DOCUMENT: {
+        const btn = new MessageButton({ customId: 'load_document', style: 'PRIMARY', label: 'Load file' });
+        components.push(new MessageActionRow({ components: [btn] }));
+        embed.setDescription(`[Document]`);
+        embed.addField('Filename', rawFileName || 'unknown', true);
+        embed.addField('Size', (fileSize! / 1000) + ' kB', true);
+        embed.addField('Can send', fileIsOverLimit ? 'No, its over 8MB' : 'Yes', false);
+        embeds.push(embed);
         break;
-      case MessageTypes.IMAGE:
+      }
+      case MessageTypes.IMAGE: {
         if (hasFile) {
           const fileName = `Image_Received_${this.nowDateStr()}.${fileExtension}`;
           const attachment = new MessageAttachment(fileBuffer!, fileName);
@@ -267,10 +331,20 @@ export default class ChatChannel extends EventEmitter {
           embeds.push(embed);
         }
         break;
-      case MessageTypes.LOCATION:
-        console.log('receive whatsapp message location');
+      }
+      case MessageTypes.LOCATION: {
+        const btn = new MessageButton({ customId: 'show_location', style: 'PRIMARY', label: 'Show Location' });
+        components.push(new MessageActionRow({ components: [btn] }));
+        const lat = parseFloat(waMessage.lat || '0');
+        const lng = parseFloat(waMessage.lng || '0');
+        embed.setDescription(`[Location]`);
+        embed.addField('Lat', `${lat}`, true);
+        embed.addField('Lng', `${lng}`, true);
+        embed.addField('Maps', `https://www.google.com.br/maps/dir//${lat},${lng}/@${lat},${lng},17z`, false);
+        embeds.push(embed);
         break;
-      case MessageTypes.STICKER:
+      }
+      case MessageTypes.STICKER: {
         if (hasFile) {
           if (isAnimated) {
             const btn = new MessageButton({ customId: 'load_animated_sticker', style: 'PRIMARY', label: 'Load sticker' });
@@ -286,7 +360,8 @@ export default class ChatChannel extends EventEmitter {
           }
         }
         break;
-      case MessageTypes.VIDEO:
+      }
+      case MessageTypes.VIDEO: {
         if (hasFile) {
           // @ts-ignore
           if (waMessage.isGif) {
@@ -300,6 +375,8 @@ export default class ChatChannel extends EventEmitter {
             const btn = new MessageButton({ customId: 'load_video', style: 'PRIMARY', label: 'Load video' });
             components.push(new MessageActionRow({ components: [btn] }));
             embed.setDescription('[Video]');
+            embed.addField('Size', (fileSize! / 1000) + ' kB', true);
+            embed.addField('Can send', fileIsOverLimit ? 'No, its over 8MB' : 'Yes', false);
             embeds.push(embed);
           }
         }
@@ -308,7 +385,8 @@ export default class ChatChannel extends EventEmitter {
           embeds.push(embed);
         }
         break;
-      case MessageTypes.VOICE:
+      }
+      case MessageTypes.VOICE: {
         if (hasFile) {
           const fileName = `Voice_Received_${this.nowDateStr()}.mp3`;
           const buf = await FileConverter.convert(fileBuffer!, fileFormat, 'mp3');
@@ -316,22 +394,48 @@ export default class ChatChannel extends EventEmitter {
           files.push(attachment);
         }
         break;
+      }
       // @ts-ignore
-      case 'gp2': // Chat/group rename
-        this.channelName = undefined;
-        await this.channel?.setName(body);
-        this.channelName = this.channel?.name;
-        embed.setDescription(`*Changed chat name to ${body}*`);
-        embeds.push(embed);
+      case 'gp2': { // Chat/group rename
+        // @ts-ignore
+        switch (waMessage.subtype) {
+          case 'description':
+            const newTopic = this.sanitizeChatDescription(body);
+            console.log(`[Whatsapp -> Discord] ${this.waChatId}: Set topic=${newTopic}`);
+            if (newTopic !== this.channelTopic) {
+              this.channel?.setTopic(newTopic);
+            }
+            this.channelTopic = this.channel?.topic ? this.channel?.topic : undefined;
+            embed.setDescription(`*Changed chat description to "${newTopic}"*`);
+            embeds.push(embed);
+            break;
+          case 'subject':
+            const newName = this.sanitizeChatName(body);
+            this.channelName = undefined;
+            console.log(`[Whatsapp -> Discord] ${this.waChatId}: Set name=${newName}`);
+            if (newName !== this.channelName) {
+              this.channel?.setName(newName);
+            }
+            this.channelName = this.channel?.name;
+            embed.setDescription(`*Changed chat name to "${newName}"*`);
+            embeds.push(embed);
+            break;
+        }
         break;
-      default:
-        return;
+      }
+      default: {
+        console.log('Unhandled WaMessage:', waMessage);
+        embed.setDescription(`*Unhandled message, please, check your whatsapp*`);
+        embed.addField('Type', String(waMessage.type));
+        embeds.push(embed);
+      }
     }
     
     try {
-      const dcMessage = await this.channel!.send({ embeds, files, components });
-      this.dcMsgIdAndWaMsgId![dcMessage.id] = id;
+      const dcMessage = await this.channel!.send({ embeds, files, components, reply });
+      this.dcMsgIdAndWaMsgId!.unshift({ dcMsgId: dcMessage.id, waMsgId: id});
       this.emit('dc message sent', dcMessage);
+      this.emit('data changed', this.chatData);
     } catch (exc) {
       console.error('Error on sent message to discord', exc);
     }
@@ -355,6 +459,14 @@ export default class ChatChannel extends EventEmitter {
         await this.receiveWhatsappChatMessage(message);
       }
     }
+  }
+
+  private sanitizeChatName(name: string|undefined) {
+    return name && name.length >= 1 ? (name.length > 100 ? name.substring(0, 100) : name) : 'unnamed';
+  }
+
+  private sanitizeChatDescription(description: string|undefined) {
+    return description ? (description.length > 1024 ? description.substring(0, 1024) : description) : '';
   }
 
   private nowDateStr() {
