@@ -17,6 +17,7 @@ Use Whatsapp through Discord.
 ```typescript
 export const Credentials = {
   discordBotToken: 'YOUR_DISCORD_BOT_TOKEN',
+  discordBotClientId: 'YOUR_DISCORD_BOT_CLIENT_ID',
 };
 ```
 - Run `npm i` to install dependencies.
@@ -26,14 +27,7 @@ export const Credentials = {
 
 ## Problems
 
-- If the integrity check is failing for you, try to disable the headless mode on the file `whatsapp.ts` on `src/bots` folder.
-```typescript
-headless: true,
-```
-to
-```typescript
-headless: false,
-```
+- For some reasong when I enable the headless mode sometimes the integrity check doesnt work. Then, by default, its disabled, if you want to enable go to `whatsapp.ts` file on `src/bots` dir and change what you want. I think it is happening because multi device support is very recent.
 
 ---
 
