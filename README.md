@@ -12,13 +12,11 @@ Use Whatsapp through Discord.
 - Create an application and a bot on discord developer website.
 - Create an server for you (**ONLY YOU!!!**).
 - Add the bot to the server as administrator.
-- Get the discord bot token.
-- Create a `credentials.ts` file inside the `src` folder and write the following:
-```typescript
-export const Credentials = {
-  discordBotToken: 'YOUR_DISCORD_BOT_TOKEN',
-  discordBotClientId: 'YOUR_DISCORD_BOT_CLIENT_ID',
-};
+- Get the discord bot token and client id.
+- Create a `.env` file on root directory and write the following:
+```
+DISCORD_BOT_TOKEN=TOKEN_HERE
+DISCORD_BOT_CLIENT_ID=CLIENT_ID_HERE
 ```
 - Run `npm i` to install dependencies.
 - Run the bot with `npm run dev`, scan the qr code and enjoy.

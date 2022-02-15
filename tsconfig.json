@@ -12,5 +12,8 @@
     "strict": true,
     "noImplicitAny": true,
     "skipLibCheck": true
+  },
+  "ts-node": {
+    "files": true,
   }
 }

@@ -50,6 +50,7 @@ export default class Discord {
     });
     
     await this.client.login(token);
+    this.client.setMaxListeners(0);
   }
 
   public static waitReady() {

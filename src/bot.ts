@@ -1,5 +1,4 @@
 import { readFileSync, writeFileSync } from "fs";
-import { Credentials } from "./credentials";
 import Discord from "./bots/discord";
 import Whatsapp from "./bots/whatsapp";
 import ChatsChannel, { ChatsData } from "./channels/chats-channel";
@@ -93,7 +92,7 @@ async function initializeWhatsapp() {
 }
 
 async function initializeDiscord() {
-  await Discord.connect(Credentials.discordBotToken, Credentials.discordBotClientId);
+  await Discord.connect(process.env.DISCORD_BOT_TOKEN, process.env.DISCORD_BOT_CLIENT_ID);
 }
 
 start();

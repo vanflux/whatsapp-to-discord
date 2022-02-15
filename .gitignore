@@ -1,6 +1,8 @@
 node_modules/
-src/credentials.ts
 state.json
+dist/
+.env
+
 # @Open/WA files
 _IGNORE*/
 *.data.json
