@@ -48,9 +48,9 @@ export default class ChatsChannel extends EventEmitter {
     }
 
     if (this.channelId) {
-      Whatsapp.client.onAnyMessage(waMessage => this.handleWhatsappAnyMessage(waMessage));
-      Discord.client.on('channelDelete', channel => this.handleDiscordChannelDelete(channel));
-      Discord.client.on('channelUpdate', (oldChannel, newChannel) => this.handleDiscordChannelUpdate(oldChannel, newChannel));
+      await Whatsapp.onAnyMessage(waMessage => this.handleWhatsappAnyMessage(waMessage));
+      await Discord.on('channelDelete', channel => this.handleDiscordChannelDelete(channel));
+      await Discord.on('channelUpdate', (oldChannel, newChannel) => this.handleDiscordChannelUpdate(oldChannel, newChannel));
       this.ready = true;
       this.emit('ready');
     } else {

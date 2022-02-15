@@ -56,10 +56,10 @@ export default class ChatChannel extends EventEmitter {
     if (!this.channelId) await this.createNewChannel();
 
     if (this.channelId) {
-      Whatsapp.client.onAnyMessage(waMessage => this.handleWhatsappAnyMessage(waMessage));
-      Discord.client.on('messageCreate', dcMessage => this.handleDiscordMessageCreate(dcMessage));
-      Discord.client.on('interactionCreate', interaction => this.handleDiscordInteractionCreate(interaction));
-      Discord.client.on('channelDelete', channel => this.handleDiscordChannelDelete(channel));
+      await Whatsapp.onAnyMessage(waMessage => this.handleWhatsappAnyMessage(waMessage));
+      await Discord.on('messageCreate', dcMessage => this.handleDiscordMessageCreate(dcMessage));
+      await Discord.on('interactionCreate', interaction => this.handleDiscordInteractionCreate(interaction));
+      await Discord.on('channelDelete', channel => this.handleDiscordChannelDelete(channel));
       this.ready = true;
       this.emit('ready');
     } else {
@@ -144,25 +144,24 @@ export default class ChatChannel extends EventEmitter {
     if (waMessage) {
       const profilePictureUrl = waMessage.sender?.profilePicThumbObj?.img;
       const senderName = waMessage.sender.formattedName;
+      console.log(`[Discord Interaction] Type=${type}`);
       switch(type) {
         case 'load_animated_sticker': {
+          console.log('[Discord Interaction] load animated sticker request');
           const fileBuffer = await decryptMedia(waMessage);
           const fileName = `Sticker_Received_${this.nowDateStr()}.gif`;
-          
-          const start = Date.now();
           const buf = await Webp2Gif.convert(fileBuffer!);
-          const end = Date.now();
-          console.log('Webp -> Gif conversion time:', end-start, 'output buffer size', buf!.length);
-          
           const attachment = new MessageAttachment(buf!, fileName);
           const embed = new MessageEmbed();
           embed.setAuthor({ iconURL: profilePictureUrl, name: senderName });
           embed.setColor(waMessage.fromMe ? 'GREEN' : 'GREY');
           embed.setImage(`attachment://${fileName}`);
           await buttonInteraction.editReply({ embeds: [embed], files: [attachment], components: [] });
+          console.log('[Discord Interaction] load animated sticker completed');
           break;
         }
         case 'load_video': {
+          console.log('[Discord Interaction] load video request');
           if (waMessage.mimetype) {
             const fileBuffer = await decryptMedia(waMessage);
             const fileExtension = extension(waMessage.mimetype);
@@ -170,29 +169,38 @@ export default class ChatChannel extends EventEmitter {
             const attachment = new MessageAttachment(fileBuffer!, fileName);
             await buttonInteraction.editReply({ embeds: [], files: [attachment], components: [] });
           }
+          console.log('[Discord Interaction] load video completed');
           break;
         }
         case 'load_document': {
+          console.log('[Discord Interaction] load document request');
           if (waMessage.mimetype) {
             const fileBuffer = await decryptMedia(waMessage);
             const fileName = buttonInteraction.message?.embeds[0]?.fields?.find(field => field.name === 'Filename')?.value || 'unknown';
             const attachment = new MessageAttachment(fileBuffer!, fileName);
             await buttonInteraction.editReply({ embeds: [], files: [attachment], components: [] });
           }
+          console.log('[Discord Interaction] load document completed');
           break;
         }
         case 'show_location': {
+          console.log('[Discord Interaction] show location request');
           await this.updateLocation(waMessage, buttonInteraction, 17);
+          console.log('[Discord Interaction] show location completed');
           break;
         }
         case 'location_zoom_out': {
+          console.log('[Discord Interaction] zoom out request');
           const zoom = parseInt(buttonInteraction.message?.embeds[0]?.fields?.find(field => field.name === 'Zoom')?.value || '17') - 1;
           await this.updateLocation(waMessage, buttonInteraction, zoom);
+          console.log('[Discord Interaction] zoom out completed');
           break;
         }
         case 'location_zoom_in': {
+          console.log('[Discord Interaction] zoom in request');
           const zoom = parseInt(buttonInteraction.message?.embeds[0]?.fields?.find(field => field.name === 'Zoom')?.value || '17') + 1;
           await this.updateLocation(waMessage, buttonInteraction, zoom);
+          console.log('[Discord Interaction] zoom in completed');
           break;
         }
         default:
