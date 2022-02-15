@@ -6,10 +6,10 @@ import { WritableStreamBuffer } from "stream-buffers";
 import { pipeline } from "stream";
 import FileConverter from "../converters/file-converter";
 import { opus } from "prism-media";
-import Whatsapp from "../bots/whatsapp";
+import AudioManager from "../audio-manager";
 
 const channelName = '🔉audio🔉';
-const channelTopic = 'Qr Code Channel';
+const channelTopic = 'Audio Channel';
 
 export interface AudioData {
   channelId?: string;
@@ -25,10 +25,10 @@ export default class AudioChannel extends EventEmitter {
   
   private set channelId(value) { this.audioData.channelId = value };
 
-  constructor(guildId: string, qrData: AudioData) {
+  constructor(guildId: string, audioData: AudioData) {
     super();
     this.guildId = guildId;
-    this.audioData = qrData;
+    this.audioData = audioData;
   }
 
   public async setup() {
@@ -72,15 +72,17 @@ export default class AudioChannel extends EventEmitter {
               console.log('Received PCB Buffer');
               const mp3Buffer = await FileConverter.convert(pcmBuffer, 's16le', 'mp3', ['-ar', `${rate}`, '-ac', `${channels}`], []);
               if (!mp3Buffer) return;
-              const uri = `data:audio/mp3;base64,${mp3Buffer.toString('base64')}`;
-              //await Whatsapp.sendVoice('XXXXXXXXXXX', uri);
-              //console.log('Audio sent');
+              console.log('Audio added');
+              AudioManager.addAudio(mp3Buffer);
             });
             
-            pipeline(opusStream, decoder, wsb, console.log);
+            const cb = (err: NodeJS.ErrnoException | null) => err && console.log(err);
+
+            pipeline(opusStream, decoder, wsb, cb);
           }
         } else {
           if (connection) {
+            opusStream?.emit('end');
             opusStream?.destroy();
             connection.disconnect();
             connection.destroy();
@@ -109,7 +111,7 @@ export default class AudioChannel extends EventEmitter {
     return this.channel;
   }
 
-  public getQrData() {
+  public getAudioData() {
     return this.audioData;
   }
 

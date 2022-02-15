@@ -1,11 +1,19 @@
-import { Client, GuildChannelCreateOptions } from "discord.js";
+import { REST } from "@discordjs/rest";
+import { Awaitable, Client, ClientEvents, GuildChannelCreateOptions } from "discord.js";
+import { Routes } from "discord-api-types/v9";
 
 export default class Discord {
   private static client: Client;
+  private static rest: REST;
+  private static token: string;
+  private static clientId: string;
   private static ready = false;
   private static waitingReadyResolves: Function[] = [];
 
-  public static async connect(token: string) {
+  public static async connect(token: string, clientId: string) {
+    this.token = token;
+    this.clientId = clientId;
+
     this.client = new Client({
       intents: [
         "GUILDS",
@@ -21,6 +29,7 @@ export default class Discord {
         "GUILD_WEBHOOKS",
       ],
     });
+    this.rest = new REST().setToken(token);
 
     this.client.on('ready', () => {
       console.log('[Discord] Client ready!');
@@ -48,9 +57,9 @@ export default class Discord {
     return new Promise(resolve => this.waitingReadyResolves.push(resolve));
   }
 
-  public static async on(...args: Parameters<typeof Client.prototype.on>) {
+  public static async on<K extends keyof ClientEvents>(event: K, listener: (...args: ClientEvents[K]) => Awaitable<void>) {
     await this.waitReady();
-    this.client.on(...args);
+    this.client.on(event, listener);
   }
 
   public static async getFirstGuildId() {
@@ -84,5 +93,12 @@ export default class Discord {
       if (!guild) return;
       return await guild.channels.create(name, options);
     } catch (exc) { }
+  }
+
+  public static async setCommands(guildId: string, commands: {name: string, description: string}[]) {
+    await this.rest.put(
+      Routes.applicationGuildCommands(this.clientId, guildId),
+      { body: commands },
+    );
   }
 }

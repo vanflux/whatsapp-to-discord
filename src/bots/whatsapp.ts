@@ -1,4 +1,4 @@
-import { Client, create } from "@open-wa/wa-automate";
+import { ChatState, Client, create, Message } from "@open-wa/wa-automate";
 
 export default class Whatsapp {
   private static client: Client;
@@ -31,9 +31,14 @@ export default class Whatsapp {
     return new Promise(resolve => this.waitingReadyResolves.push(resolve));
   }
 
-  public static async onAnyMessage(...args: Parameters<typeof Client.prototype.onAnyMessage>) {
+  public static async onAnyMessage(fn: (message: Message) => void) {
     await this.waitReady();
-    this.client.onAnyMessage(...args);
+    this.client.onAnyMessage(fn);
+  }
+  
+  public static async onChatState(fn: (chatState: ChatState) => void) {
+    await this.waitReady();
+    this.client.onChatState(fn);
   }
 
   public static async getAllChats() {
@@ -46,6 +51,11 @@ export default class Whatsapp {
     return await this.client.getChatById(id as any);
   }
   
+  public static async simulateTyping(chatId: string, on: boolean) {
+    await this.waitReady();
+    return await this.client.simulateTyping(chatId as any, on);
+  }
+
   public static async sendTextMessage(chatId: string, message: string) {
     await this.waitReady();
     return await this.client.sendText(chatId as any, message);

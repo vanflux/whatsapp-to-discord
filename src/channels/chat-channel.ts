@@ -1,5 +1,5 @@
-import { decryptMedia, Message as WaMessage, MessageTypes } from "@open-wa/wa-automate";
-import { ButtonInteraction, MessageActionRow, MessageAttachment, MessageButton, MessageEmbed, Message as DcMessage, TextChannel, Interaction, Channel, ReplyOptions } from "discord.js"
+import { ChatState, decryptMedia, Message as WaMessage, MessageTypes } from "@open-wa/wa-automate";
+import { ButtonInteraction, MessageActionRow, MessageAttachment, MessageButton, MessageEmbed, Message as DcMessage, TextChannel, Interaction, Channel, ReplyOptions, Typing, MessageOptions } from "discord.js"
 import { extension } from "mime-types";
 import FileConverter from "../converters/file-converter";
 import Webp2Gif from "../converters/webp-2-gif";
@@ -7,6 +7,7 @@ import Discord from "../bots/discord";
 import Whatsapp from "../bots/whatsapp";
 import EventEmitter from "events";
 import StaticMaps from "staticmaps";
+import AudioManager from "../audio-manager";
 
 const oldMessagesLimit = 5;
 
@@ -57,9 +58,11 @@ export default class ChatChannel extends EventEmitter {
 
     if (this.channelId) {
       await Whatsapp.onAnyMessage(waMessage => this.handleWhatsappAnyMessage(waMessage));
+      await Whatsapp.onChatState(chatState => this.handleWhatsappChatState(chatState));
       await Discord.on('messageCreate', dcMessage => this.handleDiscordMessageCreate(dcMessage));
       await Discord.on('interactionCreate', interaction => this.handleDiscordInteractionCreate(interaction));
       await Discord.on('channelDelete', channel => this.handleDiscordChannelDelete(channel));
+      await Discord.on('typingStart', (typing: Typing) => this.handleDiscordTypingStart(typing));
       this.ready = true;
       this.emit('ready');
     } else {
@@ -126,6 +129,13 @@ export default class ChatChannel extends EventEmitter {
     await this.receiveWhatsappChatMessage(waMessage);
   }
 
+  private async handleWhatsappChatState(chatState: ChatState) {
+    console.log('chat state', chatState);
+    if (chatState === ChatState.TYPING) {
+      this.channel?.sendTyping();
+    }
+  }
+
   private async handleDiscordMessageCreate(dcMessage: DcMessage) {
     if (dcMessage.author.bot) return;
     if (dcMessage.channelId !== this.channelId) return;
@@ -133,82 +143,91 @@ export default class ChatChannel extends EventEmitter {
   }
 
   private async handleDiscordInteractionCreate(interaction: Interaction) {
-    if (this.channelId !== interaction.channelId || !interaction.isButton) return;
-
-    const buttonInteraction = interaction as ButtonInteraction;
-    const type = buttonInteraction.customId;
-    const messageId = this.dcMsgIdAndWaMsgId!.find(x => x.dcMsgId === buttonInteraction.message.id)?.waMsgId;
-    console.log(`[Discord Interaction] DcMessageId=${buttonInteraction.message.id}, WaMessageId=${messageId}`);
-    await buttonInteraction.deferUpdate();
-    const waMessage = await Whatsapp.getMessageById(messageId!);
-    if (waMessage) {
-      const profilePictureUrl = waMessage.sender?.profilePicThumbObj?.img;
-      const senderName = waMessage.sender.formattedName;
-      console.log(`[Discord Interaction] Type=${type}`);
-      switch(type) {
-        case 'load_animated_sticker': {
-          console.log('[Discord Interaction] load animated sticker request');
-          const fileBuffer = await decryptMedia(waMessage);
-          const fileName = `Sticker_Received_${this.nowDateStr()}.gif`;
-          const buf = await Webp2Gif.convert(fileBuffer!);
-          const attachment = new MessageAttachment(buf!, fileName);
-          const embed = new MessageEmbed();
-          embed.setAuthor({ iconURL: profilePictureUrl, name: senderName });
-          embed.setColor(waMessage.fromMe ? 'GREEN' : 'GREY');
-          embed.setImage(`attachment://${fileName}`);
-          await buttonInteraction.editReply({ embeds: [embed], files: [attachment], components: [] });
-          console.log('[Discord Interaction] load animated sticker completed');
-          break;
-        }
-        case 'load_video': {
-          console.log('[Discord Interaction] load video request');
-          if (waMessage.mimetype) {
+    if (this.channelId !== interaction.channelId) return;
+    
+    if (interaction.isButton()) {
+      const buttonInteraction = interaction as ButtonInteraction;
+      const type = buttonInteraction.customId;
+      const messageId = this.dcMsgIdAndWaMsgId!.find(x => x.dcMsgId === buttonInteraction.message.id)?.waMsgId;
+      console.log(`[Discord Interaction] DcMessageId=${buttonInteraction.message.id}, WaMessageId=${messageId}`);
+      await buttonInteraction.deferUpdate();
+      const waMessage = await Whatsapp.getMessageById(messageId!);
+      if (waMessage) {
+        const profilePictureUrl = waMessage.sender?.profilePicThumbObj?.img;
+        const senderName = waMessage.sender.formattedName;
+        console.log(`[Discord Interaction] Type=${type}`);
+        switch(type) {
+          case 'load_animated_sticker': {
+            console.log('[Discord Interaction] load animated sticker request');
             const fileBuffer = await decryptMedia(waMessage);
-            const fileExtension = extension(waMessage.mimetype);
-            const fileName = `Video_Received_${this.nowDateStr()}.${fileExtension}`;
-            const attachment = new MessageAttachment(fileBuffer!, fileName);
-            await buttonInteraction.editReply({ embeds: [], files: [attachment], components: [] });
+            const fileName = `Sticker_Received_${this.nowDateStr()}.gif`;
+            const buf = await Webp2Gif.convert(fileBuffer!);
+            const attachment = new MessageAttachment(buf!, fileName);
+            const embed = new MessageEmbed();
+            embed.setAuthor({ iconURL: profilePictureUrl, name: senderName });
+            embed.setColor(waMessage.fromMe ? 'GREEN' : 'GREY');
+            embed.setImage(`attachment://${fileName}`);
+            await buttonInteraction.editReply({ embeds: [embed], files: [attachment], components: [] });
+            console.log('[Discord Interaction] load animated sticker completed');
+            break;
           }
-          console.log('[Discord Interaction] load video completed');
-          break;
-        }
-        case 'load_document': {
-          console.log('[Discord Interaction] load document request');
-          if (waMessage.mimetype) {
-            const fileBuffer = await decryptMedia(waMessage);
-            const fileName = buttonInteraction.message?.embeds[0]?.fields?.find(field => field.name === 'Filename')?.value || 'unknown';
-            const attachment = new MessageAttachment(fileBuffer!, fileName);
-            await buttonInteraction.editReply({ embeds: [], files: [attachment], components: [] });
+          case 'load_video': {
+            console.log('[Discord Interaction] load video request');
+            if (waMessage.mimetype) {
+              const fileBuffer = await decryptMedia(waMessage);
+              const fileExtension = extension(waMessage.mimetype);
+              const fileName = `Video_Received_${this.nowDateStr()}.${fileExtension}`;
+              const attachment = new MessageAttachment(fileBuffer!, fileName);
+              await buttonInteraction.editReply({ embeds: [], files: [attachment], components: [] });
+            }
+            console.log('[Discord Interaction] load video completed');
+            break;
           }
-          console.log('[Discord Interaction] load document completed');
-          break;
+          case 'load_document': {
+            console.log('[Discord Interaction] load document request');
+            if (waMessage.mimetype) {
+              const fileBuffer = await decryptMedia(waMessage);
+              const fileName = buttonInteraction.message?.embeds[0]?.fields?.find(field => field.name === 'Filename')?.value || 'unknown';
+              const attachment = new MessageAttachment(fileBuffer!, fileName);
+              await buttonInteraction.editReply({ embeds: [], files: [attachment], components: [] });
+            }
+            console.log('[Discord Interaction] load document completed');
+            break;
+          }
+          case 'show_location': {
+            console.log('[Discord Interaction] show location request');
+            await this.updateLocation(waMessage, buttonInteraction, 17);
+            console.log('[Discord Interaction] show location completed');
+            break;
+          }
+          case 'location_zoom_out': {
+            console.log('[Discord Interaction] zoom out request');
+            const zoom = parseInt(buttonInteraction.message?.embeds[0]?.fields?.find(field => field.name === 'Zoom')?.value || '17') - 1;
+            await this.updateLocation(waMessage, buttonInteraction, zoom);
+            console.log('[Discord Interaction] zoom out completed');
+            break;
+          }
+          case 'location_zoom_in': {
+            console.log('[Discord Interaction] zoom in request');
+            const zoom = parseInt(buttonInteraction.message?.embeds[0]?.fields?.find(field => field.name === 'Zoom')?.value || '17') + 1;
+            await this.updateLocation(waMessage, buttonInteraction, zoom);
+            console.log('[Discord Interaction] zoom in completed');
+            break;
+          }
+          default:
+            console.log('Unhandled button interaction', type, messageId);
+            break;
         }
-        case 'show_location': {
-          console.log('[Discord Interaction] show location request');
-          await this.updateLocation(waMessage, buttonInteraction, 17);
-          console.log('[Discord Interaction] show location completed');
-          break;
-        }
-        case 'location_zoom_out': {
-          console.log('[Discord Interaction] zoom out request');
-          const zoom = parseInt(buttonInteraction.message?.embeds[0]?.fields?.find(field => field.name === 'Zoom')?.value || '17') - 1;
-          await this.updateLocation(waMessage, buttonInteraction, zoom);
-          console.log('[Discord Interaction] zoom out completed');
-          break;
-        }
-        case 'location_zoom_in': {
-          console.log('[Discord Interaction] zoom in request');
-          const zoom = parseInt(buttonInteraction.message?.embeds[0]?.fields?.find(field => field.name === 'Zoom')?.value || '17') + 1;
-          await this.updateLocation(waMessage, buttonInteraction, zoom);
-          console.log('[Discord Interaction] zoom in completed');
-          break;
-        }
-        default:
-          console.log('Unhandled button interaction', type, messageId);
-          break;
+      } else {
+        await buttonInteraction.editReply('WA Message not found');
       }
-    } else {
-      await buttonInteraction.editReply('WA Message not found');
+    } else if (interaction.isCommand()) {
+      if (interaction.commandName === 'voice') {
+        const mp3AudioBuffer = AudioManager.shiftNextAudioBuffer();
+        if (!mp3AudioBuffer) return interaction.reply('Audios not found');
+        interaction.reply('Success!');
+        await this.sendVoiceMessage(mp3AudioBuffer);
+      }
     }
   }
 
@@ -224,7 +243,7 @@ export default class ChatChannel extends EventEmitter {
       width: 48,
       height: 48,
       coord: [lng, lat],
-      img: 'marker.png',
+      img: 'assets/images/marker.png',
     })
 
     await map.render(center, zoom);
@@ -248,6 +267,12 @@ export default class ChatChannel extends EventEmitter {
   private async handleDiscordChannelDelete(channel: Channel) {
     if (channel.id !== this.channelId) return;
     await this.createNewChannel();
+  }
+
+  private async handleDiscordTypingStart(typing: Typing) {
+    if (typing.channel.id !== this.channelId) return;
+    console.log('typing', typing.channel.id, typing.user.id, typing.startedTimestamp, Date.now());
+    Whatsapp.simulateTyping(this.waChatId, true);
   }
 
   private async sendWhatsappMessage(dcMessage: DcMessage) {
@@ -467,6 +492,10 @@ export default class ChatChannel extends EventEmitter {
         await this.receiveWhatsappChatMessage(message);
       }
     }
+  }
+
+  private async sendVoiceMessage(mp3AudioBuffer: Buffer) {
+    return await Whatsapp.sendVoice(this.waChatId, AudioManager.getDataUrl(mp3AudioBuffer));
   }
 
   private sanitizeChatName(name: string|undefined) {

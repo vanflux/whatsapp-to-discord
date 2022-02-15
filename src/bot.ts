@@ -6,6 +6,7 @@ import ChatsChannel, { ChatsData } from "./channels/chats-channel";
 import QrChannel, { QrData } from "./channels/qr-channel";
 import AudioChannel, { AudioData } from "./channels/audio-channel";
 import Webp2Gif from "./converters/webp-2-gif";
+import AudioEditorChannel, { AudioEditorData } from "./channels/audio-editor-channel";
 
 export interface W2DData {
   version?: string;
@@ -13,6 +14,7 @@ export interface W2DData {
   chatsData?: ChatsData;
   qrData?: QrData;
   audioData?: AudioData;
+  audioEditorData?: AudioEditorData;
 }
 
 let w2dData: W2DData|undefined;
@@ -40,7 +42,13 @@ async function start() {
   if (w2dData.chatsData === undefined) w2dData.chatsData = {};
   if (w2dData.qrData === undefined) w2dData.qrData = {};
   if (w2dData.audioData === undefined) w2dData.audioData = {};
+  if (w2dData.audioEditorData === undefined) w2dData.audioEditorData = {};
   w2dData.version = '1.0.1';
+
+  console.log('Setting commands');
+  Discord.setCommands(w2dData.guildId, [
+    { name: 'voice', description: 'Send Voice Audio to the chat' },
+  ]);
   
   console.log('Creating qr channel');
   const qrChannel = new QrChannel(w2dData.guildId, w2dData.qrData);
@@ -51,6 +59,11 @@ async function start() {
   const audioChannel = new AudioChannel(w2dData.guildId, w2dData.audioData);
   audioChannel.on('data changed', () => save());
   audioChannel.setup();
+  
+  console.log('Creating audio editor channel');
+  const audioEditorChannel = new AudioEditorChannel(w2dData.guildId, w2dData.audioEditorData);
+  audioEditorChannel.on('data changed', () => save());
+  audioEditorChannel.setup();
 
   console.log('Creating chats channel');
   const chatsChannel = new ChatsChannel(w2dData.guildId, w2dData.chatsData);
@@ -80,7 +93,7 @@ async function initializeWhatsapp() {
 }
 
 async function initializeDiscord() {
-  await Discord.connect(Credentials.discordBotToken);
+  await Discord.connect(Credentials.discordBotToken, Credentials.discordBotClientId);
 }
 
 start();

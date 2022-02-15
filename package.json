@@ -4,7 +4,7 @@
   "description": "Use whatsapp through discord.",
   "main": "src/app.ts",
   "scripts": {
-    "dev": "ts-node-dev src/app.ts --watch"
+    "dev": "ts-node-dev src/app.ts --respawn"
   },
   "repository": {
     "type": "git",
@@ -22,6 +22,7 @@
   },
   "dependencies": {
     "@discordjs/opus": "^0.5.3",
+    "@discordjs/rest": "^0.3.0",
     "@discordjs/voice": "^0.8.0",
     "@open-wa/wa-automate": "^4.30.12",
     "@types/mime-types": "^2.1.1",
