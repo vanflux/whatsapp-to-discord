@@ -31,6 +31,12 @@ export const Credentials = {
 
 ---
 
+## Contributing
+
+- Fork it, do what you want and request the merge.
+
+---
+
 ## I'm responsible for any damage?
 
 **NO**, use at **your** risk!
