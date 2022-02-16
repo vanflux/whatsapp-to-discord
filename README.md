@@ -80,14 +80,14 @@ You only can send texts, images and audios.
 - Firstly, do the the things of `Before Usage` section.
 - Clone this project.
 - Install docker if you havent.
-- Run `docker build -t w2p .` to build the image.
+- Run `docker build -t w2d .` to build the image.
 - Run the following command to start the bot:
 
 Replace the discord tokens and client ids<br>
-Replace the path to the state, I recommend to put the absolute path of project root + "/state" (eg.: Project path: "/usr/w2p", State: "/usr/w2p/state")
+Replace the path to the state, I recommend to put the absolute path of project root + "/state" (eg.: Project path: "/usr/w2d", State: "/usr/w2d/state")
 
 ```
-docker run --rm -it -e DISCORD_BOT_TOKEN={YOUR_BOT_TOKEN} -e DISCORD_BOT_CLIENT_ID={YOUR_BOT_CLIENT_ID} -e WA_EXECUTABLE_PATH="/usr/bin/chromium-browser" -e WA_HEADLESS=true -v {PATH_TO_SAVE_STATE}:/app/state w2p
+docker run --rm -it -e DISCORD_BOT_TOKEN={YOUR_BOT_TOKEN} -e DISCORD_BOT_CLIENT_ID={YOUR_BOT_CLIENT_ID} -e WA_EXECUTABLE_PATH="/usr/bin/chromium-browser" -e WA_HEADLESS=true -v {PATH_TO_SAVE_STATE}:/app/state w2d
 ```
 
 - Now, go to the discord server and scan the qrcode.
