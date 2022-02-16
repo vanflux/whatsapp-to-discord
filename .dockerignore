@@ -7,3 +7,4 @@ Dockerfile
 .dockerignore
 .node-persist
 node_modules
+screenshots

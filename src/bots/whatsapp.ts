@@ -16,8 +16,7 @@ export default class Whatsapp {
       logConsole: false,
       popup: true,
       qrTimeout: 0, //0 means it will wait forever for you to scan the qr code
-      
-      headless: process.env.WA_HEADLESS === 'false' ? false : true,
+      headless: process.env.WA_HEADLESS === 'true' ? true : false,
       useChrome: false,
       useStealth: true,
       restartOnCrash: true,

@@ -4,6 +4,68 @@ Use Whatsapp through Discord.
 
 ---
 
+## Features
+
+### **Channels**
+
+- Qrcode receiving
+- Audio Editing (add zap.mp3 sound at the end of the audio)
+- Record audios
+
+![](screenshots/some-channels.png)
+
+- Chats
+
+![](screenshots/chat-channels.png)
+
+
+### **Receiving / Sending**
+
+You can receive more things than you can send at the moment.
+You only can send texts, images and audios.
+
+- Receive Text
+
+![](screenshots/message.png)
+
+- Receive replies
+
+![](screenshots/message-reply.png)
+
+- Receive Image
+
+![](screenshots/image-receiving.png)
+
+- Receive Audio
+
+![](screenshots/audio-receiving.png)
+
+- Receive Video
+
+![](screenshots/video-receiving-to-load.png)
+
+- Receive Document
+
+![](screenshots/doc-receiving.png)
+
+- Receive Location
+
+![](screenshots/location-to-load.png)
+
+![](screenshots/location-loaded.png)
+
+- Receive Sticker
+
+![](screenshots/sticker-received-to-load.png)
+
+![](screenshots/sticker-received-loaded.png)
+
+- Receive Gif
+
+![](screenshots/gif-receiving.png)
+
+---
+
 ## Before Usage
 
 - Create an application and a bot on discord developer website.

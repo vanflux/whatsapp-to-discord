@@ -297,7 +297,11 @@ export default class ChatChannel extends EventEmitter {
       }
     }
 
-    if (!contentSent) await Whatsapp.sendTextMessage(this.waChatId, dcMessage.content);
+    try {
+      if (!contentSent) await Whatsapp.sendTextMessage(this.waChatId, dcMessage.content);
+    } catch (exc) {
+      console.error('Error on sent message to whatsapp', exc);
+    }
     dcMessage.delete();
   }
 
