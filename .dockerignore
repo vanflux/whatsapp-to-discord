@@ -1,0 +1,9 @@
+README.md
+state
+wa-session
+Dockerfile
+.gitignore
+.env
+.dockerignore
+.node-persist
+node_modules

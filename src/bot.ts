@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from "fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import Discord from "./bots/discord";
 import Whatsapp from "./bots/whatsapp";
 import ChatsChannel, { ChatsData } from "./channels/chats-channel";
@@ -21,12 +21,12 @@ let w2dData: W2DData|undefined;
 async function start() {
   if(!await Webp2Gif.checkMagickExists()) return console.log('ImageMagick CLI is missing!');
   
+  console.log('Loading data');
+  load();
+
   console.log('Initializing bots');
   initializeDiscord();
   initializeWhatsapp();
-  
-  console.log('Loading data');
-  load();
 
   if (w2dData === undefined) w2dData = {};
   if (w2dData.guildId === undefined) {
@@ -74,7 +74,9 @@ async function start() {
 
 function load() {
   try {
-    const json = readFileSync('state.json', 'utf-8');
+    if (!existsSync('state')) mkdirSync('state', { recursive: true });
+    const json = readFileSync('state/state.json', 'utf-8');
+    console.log('json', json);
     const data = JSON.parse(json);
     w2dData = data;
   } catch (exc) {
@@ -84,7 +86,8 @@ function load() {
 }
 
 function save() {
-  writeFileSync('state.json', JSON.stringify(w2dData), 'utf-8');
+  if (!existsSync('state')) mkdirSync('state', { recursive: true });
+  writeFileSync('state/state.json', JSON.stringify(w2dData), 'utf-8');
 }
 
 async function initializeWhatsapp() {

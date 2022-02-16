@@ -3,7 +3,7 @@ import { spawn } from "child_process";
 export default class Webp2Gif {
   public static async checkMagickExists() {
     return new Promise<boolean>(resolve => {
-      const proc = spawn('magick');
+      const proc = spawn('mogrify');
       proc.on('close', () => resolve(true));
       proc.on('error', () => resolve(false));
     });
@@ -16,7 +16,7 @@ export default class Webp2Gif {
       const start = Date.now();
 
       const buffers: Buffer[] = [];
-      const proc = spawn('magick', ['mogrify', '-format', 'gif', '-']);
+      const proc = spawn('mogrify', ['-format', 'gif', '-']);
       proc.on('close', () => {
         const end = Date.now();
         console.log(`[Webp2Gif Converter] Conversion ended, id: ${id}, time(ms): ${end-start}`);

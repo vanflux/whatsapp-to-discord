@@ -1,11 +1,10 @@
 node_modules/
-state.json
+state/
 dist/
 .env
 
 # @Open/WA files
-_IGNORE*/
-*.data.json
+wa-session/
 .node-persist/
 
 # managed

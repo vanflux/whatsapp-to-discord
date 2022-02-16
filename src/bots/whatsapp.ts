@@ -8,6 +8,7 @@ export default class Whatsapp {
   public static async connect() {
     this.client = await create({
       sessionId: "OWN_SESS",
+      sessionDataPath: 'wa-session',
       multiDevice: true, //required to enable multiDevice support
       authTimeout: 60, //wait only 60 seconds to get a connection with the host account device
       blockCrashLogs: true,
@@ -16,10 +17,11 @@ export default class Whatsapp {
       popup: true,
       qrTimeout: 0, //0 means it will wait forever for you to scan the qr code
       
-      headless: false,
+      headless: process.env.WA_HEADLESS === 'false' ? false : true,
       useChrome: false,
       useStealth: true,
       restartOnCrash: true,
+      executablePath: process.env.WA_EXECUTABLE_PATH || undefined,
     });
     this.ready = true;
     this.waitingReadyResolves.forEach(func=>func());
