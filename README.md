@@ -108,7 +108,7 @@ DISCORD_BOT_TOKEN={YOUR_BOT_TOKEN}
 DISCORD_BOT_CLIENT_ID={YOUR_BOT_CLIENT_ID}
 ```
 - Run `npm i` to install dependencies.
-- Run the bot with `npm run dev`, scan the qr code and enjoy.
+- Run the bot with `npm start`, scan the qr code and enjoy.
 
 ---
 
