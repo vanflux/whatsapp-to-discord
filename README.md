@@ -82,7 +82,7 @@ You only can send texts, images and audios.
 - Firstly, do the the things of `Before Usage` section.
 - Clone this project.
 - Install docker if you havent.
-- Run `docker build -t w2d .` to build the image.
+- Run `docker build -t w2d --network host .` to build the image.
 - Run the following command to start the bot:
 
 Replace the discord tokens and client ids<br>
