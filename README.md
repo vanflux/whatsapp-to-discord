@@ -2,7 +2,9 @@
 
 Use Whatsapp through Discord.
 
----
+This project is build on top of @open-wa/wa-automate and discord.js.<br>
+https://www.npmjs.com/package/@open-wa/wa-automate<br>
+https://www.npmjs.com/package/discord.js<br>
 
 ## Features
 
