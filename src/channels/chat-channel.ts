@@ -93,6 +93,7 @@ export default class ChatChannel extends EventEmitter {
     this.lastMessageTS = 0;
     this.sendNonReceivedMessages();
     this.emit('data changed', this.chatData);
+    this.emit('channel changed', newChannelId);
   }
 
   private async handleWhatsappAnyMessage(waMessage: WaMessage) {
