@@ -1,8 +1,8 @@
 import { Message as WaMessage } from "@open-wa/wa-automate";
-import { CategoryChannel, Channel } from "discord.js";
+import { CategoryChannel } from "discord.js";
 import EventEmitter from "events";
-import Discord from "../bots/discord";
 import Whatsapp from "../bots/whatsapp";
+import PersistentChannel from "../persistent-channel";
 import ChatChannel, { ChatData } from "./chat-channel";
 
 const channelName = '💬Chats💬';
@@ -14,15 +14,14 @@ export interface ChatsData {
 
 export default class ChatsChannel extends EventEmitter {
   private guildId: string;
-  private channel: CategoryChannel|undefined;
   private chatChannels: ChatChannel[] = [];
   private chatsData: ChatsData;
   private ready = false;
+  private persistedChannel: PersistentChannel<CategoryChannel>;
 
-  private get channelId() { return this.chatsData.channelId };
+  private get channel() { return this.persistedChannel.getChannel() };
   private get chatDatas() { return this.chatsData.chatDatas! };
 
-  private set channelId(value) { this.chatsData.channelId = value };
   private set chatDatas(value) { this.chatsData.chatDatas = value };
 
   constructor(guildId: string, chatsData: ChatsData) {
@@ -31,13 +30,14 @@ export default class ChatsChannel extends EventEmitter {
 
     this.chatsData = chatsData;
     if (this.chatDatas === undefined) this.chatDatas = [];
+      
+    this.persistedChannel = new PersistentChannel(this.guildId, this.chatsData.channelId, () => ({ channelName, options: { type: 'GUILD_CATEGORY' } }));
+    this.persistedChannel.on('channel changed', (newChannelId: string) => this.handleChannelChanged(newChannelId));
   }
 
   public async setup() {
-    if (this.ready) return;
-
-    if (this.channelId) await this.loadExistentChannel();
-    if (!this.channelId) await this.createNewChannel();
+    if (this.ready) return true;
+    if (!await this.persistedChannel.setup()) return false;
 
     const topNewChats = await this.getTopNewChats(5);
     this.chatDatas.push(...topNewChats.map(chat => ({ waChatId: chat.id })));
@@ -47,19 +47,16 @@ export default class ChatsChannel extends EventEmitter {
       this.addChatChannel(chatChannel);
     }
 
-    if (this.channelId) {
-      await Whatsapp.onAnyMessage(waMessage => this.handleWhatsappAnyMessage(waMessage));
-      await Discord.on('channelDelete', channel => this.handleDiscordChannelDelete(channel));
-      await Discord.on('channelUpdate', (oldChannel, newChannel) => this.handleDiscordChannelUpdate(oldChannel, newChannel));
-      this.ready = true;
-      this.emit('ready');
-    } else {
-      this.emit('setup error');
-    }
+    await Whatsapp.onAnyMessage(waMessage => this.handleWhatsappAnyMessage(waMessage));
+    this.ready = true;
+    this.emit('ready');
+    return true;
   }
 
-  public getChannelId() {
-    return this.channelId;
+  private handleChannelChanged(newChannelId: string) {
+    this.chatsData.channelId = newChannelId;
+    this.sync();
+    this.emit('data changed', this.chatsData);
   }
 
   private hasWaChatId(waChatId: string) {
@@ -95,39 +92,16 @@ export default class ChatsChannel extends EventEmitter {
   }
 
   private async sync() {
-    if (!this.ready || !this.channelId) return;
+    if (!this.ready || !this.channel) return;
     this.chatChannels.forEach(chatChannel => {
-      if (!chatChannel.isReady() || !chatChannel.getChannelId()) return;
-      if (chatChannel.getChannel()?.parentId === this.channelId) return;
+      if (
+        !chatChannel.isReady()
+        || !chatChannel.getChannel()
+        || chatChannel.getChannel()?.parentId === this.channel!.id
+      ) return;
       console.log('set parent', chatChannel.getChannel()?.name);
       chatChannel.getChannel()?.setParent(this.channel!);
     })
-  }
-
-  private async setChannel(channel: CategoryChannel) {
-    const changed = this.channel != null;
-    this.channel = channel;
-    this.channelId = channel.id;
-    if (changed) this.emit('channel changed', channel);
-    this.emit('data changed', this.chatsData);
-  }
-
-  private async loadExistentChannel() {
-    const existentChannel = await Discord.getChannel(this.guildId, this.channelId!);
-    if (existentChannel?.type === 'GUILD_CATEGORY') {
-      this.setChannel(existentChannel);
-    } else {
-      this.channelId = undefined;
-      this.emit('data changed', this.chatsData);
-    }
-  }
-
-  private async createNewChannel() {
-    const channelCreated = await Discord.createChannel(this.guildId, channelName, { type: 'GUILD_CATEGORY' }) as CategoryChannel;
-    if (channelCreated) {
-      this.setChannel(channelCreated);
-      this.sync();
-    }
   }
 
   private async handleWhatsappAnyMessage(waMessage: WaMessage) {
@@ -148,20 +122,6 @@ export default class ChatsChannel extends EventEmitter {
       const chatChannel = new ChatChannel(this.guildId, chatData);
       chatChannel.setup();
       this.addChatChannel(chatChannel);
-    }
-  }
-  
-  private async handleDiscordChannelDelete(channel: Channel) {
-    if (channel.id !== this.channelId) return;
-    await this.createNewChannel();
-  }
-  
-  private async handleDiscordChannelUpdate(oldChannel: Channel, newChannel: Channel) {
-    if (oldChannel.id !== this.channelId) return;
-    if (newChannel.type !== 'GUILD_CATEGORY') return;
-    const newCategoryChannel = newChannel as CategoryChannel;
-    if (newCategoryChannel.name != channelName) {
-      await this.channel?.setName(channelName);
     }
   }
 }

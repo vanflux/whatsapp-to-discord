@@ -1,7 +1,7 @@
-import { Message as DcMessage, TextChannel, Channel, MessageEmbed, MessageAttachment } from "discord.js";
+import { Message as DcMessage, MessageEmbed, MessageAttachment, TextChannel } from "discord.js";
 import { ev } from '@open-wa/wa-automate';
-import Discord from "../bots/discord";
 import EventEmitter from "events";
+import PersistentChannel from "../persistent-channel";
 
 const channelName = '⚫qr-code⚪';
 const channelTopic = 'Qr Code Channel';
@@ -11,84 +11,36 @@ export interface QrData {
 };
 
 export default class QrChannel extends EventEmitter {
+  private persistentChannel: PersistentChannel<TextChannel>;
   private guildId: string;
-  private channel: TextChannel|undefined;
   private qrData: QrData;
   private ready = false;
   private lastQrCodeTS = 0;
   
-  private get channelId() { return this.qrData.channelId };
-  
-  private set channelId(value) { this.qrData.channelId = value };
+  private get channel() { return this.persistentChannel.getChannel() };
 
   constructor(guildId: string, qrData: QrData) {
     super();
     this.guildId = guildId;
     this.qrData = qrData;
+    this.persistentChannel = new PersistentChannel(this.guildId, this.qrData.channelId, () => ({ channelName, options: { type: 'GUILD_TEXT', topic: channelTopic } }));
+    this.persistentChannel.on('channel changed', (newChannelId: string) => this.handleChannelChanged(newChannelId));
   }
 
   public async setup() {
-    if (this.ready) return;
+    if (this.ready) return true;
+    if (!await this.persistentChannel.setup()) return false;
 
-    if (this.channelId) await this.loadExistentChannel();
-    if (!this.channelId) await this.createNewChannel();
+    ev.on('qr.**', async qrCode => this.handleQrCodeChange(qrCode));
 
-    if (this.channelId) {
-      ev.on('qr.**', async qrCode => this.handleQrCodeChange(qrCode));
-      await Discord.on('channelDelete', channel => this.handleDiscordChannelDelete(channel));
-
-      this.ready = true;
-      this.emit('ready');
-    } else {
-      this.emit('setup error');
-    }
+    this.ready = true;
+    this.emit('ready');
+    return true;
   }
 
-  public isReady() {
-    return this.ready;
-  }
-
-  public getChannelId() {
-    return this.channelId;
-  }
-  
-  public getChannel() {
-    return this.channel;
-  }
-
-  public getQrData() {
-    return this.qrData;
-  }
-
-  private async setChannel(channel: TextChannel) {
-    const changed = this.channel != null;
-    this.channel = channel;
-    this.channelId = channel.id;
-    if (changed) this.emit('channel changed', channel);
+  private handleChannelChanged(newChannelId: string) {
+    this.qrData.channelId = newChannelId;
     this.emit('data changed', this.qrData);
-  }
-
-  private async loadExistentChannel() {
-    const existentChannel = await Discord.getChannel(this.guildId, this.channelId!);
-    if (existentChannel?.type === 'GUILD_TEXT') {
-      this.setChannel(existentChannel);
-    } else {
-      this.channelId = undefined;
-      this.emit('data changed', this.qrData);
-    }
-  }
-
-  private async createNewChannel() {
-    const channelCreated = await Discord.createChannel(this.guildId, channelName, { type: 'GUILD_TEXT', topic: channelTopic }) as TextChannel;
-    if (channelCreated) {
-      this.emit('data changed', this.qrData);
-      this.setChannel(channelCreated);
-    }
-  }
-
-  private async handleDiscordChannelDelete(channel: Channel) {
-    if (channel.id !== this.channelId) return;
-    await this.createNewChannel();
   }
 
   private async handleQrCodeChange(qrCode: string) {

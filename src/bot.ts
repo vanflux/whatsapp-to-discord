@@ -76,7 +76,6 @@ function load() {
   try {
     if (!existsSync('state')) mkdirSync('state', { recursive: true });
     const json = readFileSync('state/state.json', 'utf-8');
-    console.log('json', json);
     const data = JSON.parse(json);
     w2dData = data;
   } catch (exc) {

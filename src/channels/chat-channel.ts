@@ -1,5 +1,5 @@
 import { ChatState, decryptMedia, Message as WaMessage, MessageTypes } from "@open-wa/wa-automate";
-import { ButtonInteraction, MessageActionRow, MessageAttachment, MessageButton, MessageEmbed, Message as DcMessage, TextChannel, Interaction, Channel, ReplyOptions, Typing, MessageOptions } from "discord.js"
+import { ButtonInteraction, MessageActionRow, MessageAttachment, MessageButton, MessageEmbed, Message as DcMessage, TextChannel, Interaction, ReplyOptions, Typing } from "discord.js"
 import { extension } from "mime-types";
 import FileConverter from "../converters/file-converter";
 import Webp2Gif from "../converters/webp-2-gif";
@@ -8,6 +8,7 @@ import Whatsapp from "../bots/whatsapp";
 import EventEmitter from "events";
 import StaticMaps from "staticmaps";
 import AudioManager from "../audio-manager";
+import PersistentChannel from "../persistent-channel";
 
 const oldMessagesLimit = 5;
 
@@ -20,19 +21,19 @@ export interface ChatData {
 
 export default class ChatChannel extends EventEmitter {
   private guildId: string;
-  private channel: TextChannel|undefined;
   private channelName: string|undefined;
   private channelTopic: string|undefined;
   private chatData: ChatData;
   private ready = false;
+  private persistentChannel: PersistentChannel<TextChannel>;
   
   private get waChatId() { return this.chatData.waChatId };
-  private get channelId() { return this.chatData.channelId };
+  private get channel() { return this.persistentChannel.getChannel() };
+  private get channelId() { return this.persistentChannel.getChannelId() };
   private get lastMessageTS() { return this.chatData.lastMessageTS };
   private get dcMsgIdAndWaMsgId() { return this.chatData.dcMsgIdAndWaMsgId };
   
   private set waChatId(value) { this.chatData.waChatId = value };
-  private set channelId(value) { this.chatData.channelId = value };
   private set lastMessageTS(value) { this.chatData.lastMessageTS = value };
   private set dcMsgIdAndWaMsgId(value) { this.chatData.dcMsgIdAndWaMsgId = value };
 
@@ -43,41 +44,41 @@ export default class ChatChannel extends EventEmitter {
     if (this.waChatId === undefined) throw new Error('WaChatId is required');
     if (this.lastMessageTS === undefined) this.lastMessageTS = 0;
     if (this.dcMsgIdAndWaMsgId === undefined) this.dcMsgIdAndWaMsgId = [];
+
+    this.persistentChannel = new PersistentChannel(guildId, chatData.channelId, () => ({
+      channelName: this.channelName!,
+      options: { type: 'GUILD_TEXT', topic: this.channelTopic }
+    }));
+    this.persistentChannel.on('channel changed', (newChannelId: string) => this.handleChannelChanged(newChannelId));
   }
 
   public async setup() {
-    if (this.ready) return;
+    if (this.ready) return true;
 
     const chat = await Whatsapp.getChatById(this.waChatId);
     this.channelName = this.sanitizeChatName(chat.name || chat.formattedTitle);
     // @ts-ignore
     this.channelTopic = this.sanitizeChatDescription(chat.groupMetadata?.desc);
 
-    if (this.channelId) await this.loadExistentChannel();
-    if (!this.channelId) await this.createNewChannel();
+    if (!await this.persistentChannel.setup()) return false;
 
-    if (this.channelId) {
-      await Whatsapp.onAnyMessage(waMessage => this.handleWhatsappAnyMessage(waMessage));
-      await Whatsapp.onChatState(chatState => this.handleWhatsappChatState(chatState));
-      await Discord.on('messageCreate', dcMessage => this.handleDiscordMessageCreate(dcMessage));
-      await Discord.on('interactionCreate', interaction => this.handleDiscordInteractionCreate(interaction));
-      await Discord.on('channelDelete', channel => this.handleDiscordChannelDelete(channel));
-      await Discord.on('typingStart', (typing: Typing) => this.handleDiscordTypingStart(typing));
-      this.ready = true;
-      this.emit('ready');
-    } else {
-      this.emit('setup error');
-    }
+    await Whatsapp.onAnyMessage(waMessage => this.handleWhatsappAnyMessage(waMessage));
+    await Whatsapp.onChatState(chatState => this.handleWhatsappChatState(chatState));
+    await Discord.on('messageCreate', dcMessage => this.handleDiscordMessageCreate(dcMessage));
+    await Discord.on('interactionCreate', interaction => this.handleDiscordInteractionCreate(interaction));
+    await Discord.on('typingStart', (typing: Typing) => this.handleDiscordTypingStart(typing));
+    
+    this.sendNonReceivedMessages();
+
+    this.ready = true;
+    this.emit('ready');
+    return true;
   }
 
   public isReady() {
     return this.ready;
   }
 
-  public getChannelId() {
-    return this.channelId;
-  }
-  
   public getChannel() {
     return this.channel;
   }
@@ -86,42 +87,12 @@ export default class ChatChannel extends EventEmitter {
     return this.waChatId;
   }
 
-  public getChatData() {
-    return this.chatData;
-  }
-
-  private async setChannel(channel: TextChannel) {
-    const changed = this.channel != null;
-    this.channel = channel;
-    this.channelId = channel.id;
-    this.channelName = channel.name;
-    this.channelTopic = channel.topic || undefined;
-    if (changed) this.emit('channel changed', channel);
+  private async handleChannelChanged(newChannelId: string) {
+    this.chatData.channelId = newChannelId;
+    this.dcMsgIdAndWaMsgId = [];
+    this.lastMessageTS = 0;
+    this.sendNonReceivedMessages();
     this.emit('data changed', this.chatData);
-  }
-
-  private async loadExistentChannel() {
-    const existentChannel = await Discord.getChannel(this.guildId, this.channelId!);
-    if (existentChannel?.type === 'GUILD_TEXT') {
-      this.setChannel(existentChannel);
-      this.sendNonReceivedMessages();
-    } else {
-      this.channelId = undefined;
-      this.dcMsgIdAndWaMsgId = [];
-      this.lastMessageTS = 0;
-      this.emit('data changed', this.chatData);
-    }
-  }
-
-  private async createNewChannel() {
-    const channelCreated = await Discord.createChannel(this.guildId, this.channelName!, { type: 'GUILD_TEXT', topic: this.channelTopic }) as TextChannel;
-    if (channelCreated) {
-      this.dcMsgIdAndWaMsgId = [];
-      this.lastMessageTS = 0;
-      this.emit('data changed', this.chatData);
-      this.setChannel(channelCreated);
-      this.sendNonReceivedMessages();
-    }
   }
 
   private async handleWhatsappAnyMessage(waMessage: WaMessage) {
@@ -262,11 +233,6 @@ export default class ChatChannel extends EventEmitter {
     const component = new MessageActionRow({ components: [btnZoomOut, btnZoomIn] });
 
     await buttonInteraction.editReply({ embeds: [embed], files: [attachment], components: [component] });
-  }
-
-  private async handleDiscordChannelDelete(channel: Channel) {
-    if (channel.id !== this.channelId) return;
-    await this.createNewChannel();
   }
 
   private async handleDiscordTypingStart(typing: Typing) {
