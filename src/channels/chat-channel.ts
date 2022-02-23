@@ -49,7 +49,8 @@ export default class ChatChannel extends EventEmitter {
       channelName: this.channelName!,
       options: { type: 'GUILD_TEXT', topic: this.channelTopic }
     }));
-    this.persistentChannel.on('channel changed', (newChannelId: string) => this.handleChannelChanged(newChannelId));
+    this.persistentChannel.on('channel created', (newChannelId: string) => this.handleChannelCreated(newChannelId));
+    this.persistentChannel.on('channel loaded', (channelId: string) => this.handleChannelLoaded(channelId));
   }
 
   public async setup() {
@@ -67,8 +68,6 @@ export default class ChatChannel extends EventEmitter {
     await Discord.on('messageCreate', dcMessage => this.handleDiscordMessageCreate(dcMessage));
     await Discord.on('interactionCreate', interaction => this.handleDiscordInteractionCreate(interaction));
     await Discord.on('typingStart', (typing: Typing) => this.handleDiscordTypingStart(typing));
-    
-    this.sendNonReceivedMessages();
 
     this.ready = true;
     this.emit('ready');
@@ -87,7 +86,11 @@ export default class ChatChannel extends EventEmitter {
     return this.waChatId;
   }
 
-  private async handleChannelChanged(newChannelId: string) {
+  private async handleChannelLoaded(channelId: string) {
+    this.sendNonReceivedMessages();
+  }
+  
+  private async handleChannelCreated(newChannelId: string) {
     this.chatData.channelId = newChannelId;
     this.dcMsgIdAndWaMsgId = [];
     this.lastMessageTS = 0;

@@ -1,7 +1,8 @@
 node_modules/
-state/
+state*/
 dist/
 .env
+deploy*.sh
 
 # @Open/WA files
 wa-session/

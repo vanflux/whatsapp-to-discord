@@ -17,9 +17,9 @@ export default class ChatsChannel extends EventEmitter {
   private chatChannels: ChatChannel[] = [];
   private chatsData: ChatsData;
   private ready = false;
-  private persistedChannel: PersistentChannel<CategoryChannel>;
+  private persistentChannel: PersistentChannel<CategoryChannel>;
 
-  private get channel() { return this.persistedChannel.getChannel() };
+  private get channel() { return this.persistentChannel.getChannel() };
   private get chatDatas() { return this.chatsData.chatDatas! };
 
   private set chatDatas(value) { this.chatsData.chatDatas = value };
@@ -31,13 +31,13 @@ export default class ChatsChannel extends EventEmitter {
     this.chatsData = chatsData;
     if (this.chatDatas === undefined) this.chatDatas = [];
       
-    this.persistedChannel = new PersistentChannel(this.guildId, this.chatsData.channelId, () => ({ channelName, options: { type: 'GUILD_CATEGORY' } }));
-    this.persistedChannel.on('channel changed', (newChannelId: string) => this.handleChannelChanged(newChannelId));
+    this.persistentChannel = new PersistentChannel(this.guildId, this.chatsData.channelId, () => ({ channelName, options: { type: 'GUILD_CATEGORY' } }));
+    this.persistentChannel.on('channel changed', (newChannelId: string) => this.handleChannelChanged(newChannelId));
   }
 
   public async setup() {
     if (this.ready) return true;
-    if (!await this.persistedChannel.setup()) return false;
+    if (!await this.persistentChannel.setup()) return false;
 
     const topNewChats = await this.getTopNewChats(5);
     this.chatDatas.push(...topNewChats.map(chat => ({ waChatId: chat.id })));

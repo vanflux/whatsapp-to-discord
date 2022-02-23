@@ -24,7 +24,7 @@ export default class QrChannel extends EventEmitter {
     this.guildId = guildId;
     this.qrData = qrData;
     this.persistentChannel = new PersistentChannel(this.guildId, this.qrData.channelId, () => ({ channelName, options: { type: 'GUILD_TEXT', topic: channelTopic } }));
-    this.persistentChannel.on('channel changed', (newChannelId: string) => this.handleChannelChanged(newChannelId));
+    this.persistentChannel.on('channel created', (newChannelId: string) => this.handleChannelCreated(newChannelId));
   }
 
   public async setup() {
@@ -38,7 +38,7 @@ export default class QrChannel extends EventEmitter {
     return true;
   }
 
-  private handleChannelChanged(newChannelId: string) {
+  private handleChannelCreated(newChannelId: string) {
     this.qrData.channelId = newChannelId;
     this.emit('data changed', this.qrData);
   }

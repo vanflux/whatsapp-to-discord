@@ -32,7 +32,7 @@ export default class AudioChannel extends EventEmitter {
     this.guildId = guildId;
     this.audioData = audioData;
     this.persistentChannel = new PersistentChannel(this.guildId, this.audioData.channelId, () => ({ channelName, options: { type: 'GUILD_VOICE', topic: channelTopic } }));
-    this.persistentChannel.on('channel changed', (newChannelId: string) => this.handleChannelChanged(newChannelId));
+    this.persistentChannel.on('channel created', (newChannelId: string) => this.handleChannelCreated(newChannelId));
   }
 
   public async setup() {
@@ -46,7 +46,7 @@ export default class AudioChannel extends EventEmitter {
     return true;
   }
   
-  private handleChannelChanged(newChannelId: string) {
+  private handleChannelCreated(newChannelId: string) {
     this.audioData.channelId = newChannelId;
     this.emit('data changed', this.audioData);
   }

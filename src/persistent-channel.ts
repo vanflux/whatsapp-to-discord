@@ -48,29 +48,23 @@ export default class PersistentChannel<T extends Channel> extends EventEmitter {
     return this.channel;
   }
 
-  private async setChannel(channel: T) {
-    const changed = this.channelId != channel.id;
-    this.channel = channel;
-    this.channelId = channel.id;
-    if (changed) this.emit('channel changed', this.channelId);
-  }
-
   private async loadExistentChannel() {
-    const existentChannel = await Discord.getChannel(this.guildId, this.channelId!) as T|undefined;
+    let existentChannel = await Discord.getChannel(this.guildId, this.channelId!) as T|undefined;
     const { options: { type: channelType } } = this.buildChannelCreationOpts();
-    if (existentChannel?.type === (channelType || 'GUILD_TEXT')) {
-      this.setChannel(existentChannel);
-    } else {
-      this.channelId = undefined;
-      this.emit('channel changed', undefined);
-    }
+    if (existentChannel?.type !== (channelType || 'GUILD_TEXT')) existentChannel = undefined;
+    this.channel = existentChannel;
+    this.channelId = existentChannel?.id;
+    this.emit('channel changed', this.channelId);
+    this.emit('channel loaded', this.channelId);
   }
 
   private async createNewChannel() {
     const { channelName, options } = this.buildChannelCreationOpts();
     const channelCreated = await Discord.createChannel(this.guildId, channelName, options) as T|undefined;
-    if (!channelCreated) return;
-    this.setChannel(channelCreated);
+    this.channel = channelCreated;
+    this.channelId = channelCreated?.id;
+    this.emit('channel changed', this.channelId);
+    this.emit('channel created', this.channelId);
   }
 
   private async handleDiscordChannelDelete(channel: Channel) {
