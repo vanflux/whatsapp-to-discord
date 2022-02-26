@@ -53,6 +53,22 @@ export default class ChatsChannel extends EventEmitter {
     return true;
   }
 
+  public async addNewChat(waChatId: string) {
+    const chatData = { waChatId };
+    this.chatDatas.push(chatData);
+    const chatChannel = new ChatChannel(this.guildId, chatData);
+    chatChannel.setup();
+    this.addChatChannel(chatChannel);
+  }
+
+  public chatAlreadyAdded(waChatId: string) {
+    return this.chatDatas.some(x => x.waChatId == waChatId);
+  }
+  
+  public async chatExists(waChatId: string) {
+    return await Whatsapp.getChatById(waChatId);
+  }
+
   private handleChannelChanged(newChannelId: string) {
     this.chatsData.channelId = newChannelId;
     this.sync();

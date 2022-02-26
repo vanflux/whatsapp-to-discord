@@ -6,6 +6,8 @@ import QrChannel, { QrData } from "./channels/qr-channel";
 import AudioChannel, { AudioData } from "./channels/audio-channel";
 import Webp2Gif from "./converters/webp-2-gif";
 import AudioEditorChannel, { AudioEditorData } from "./channels/audio-editor-channel";
+import { SlashCommandBuilder } from "@discordjs/builders";
+import CmdsChannel, { CmdsData } from "./channels/cmds-channel";
 
 export interface W2DData {
   version?: string;
@@ -14,6 +16,7 @@ export interface W2DData {
   qrData?: QrData;
   audioData?: AudioData;
   audioEditorData?: AudioEditorData;
+  cmdsData?: CmdsData;
 }
 
 let w2dData: W2DData|undefined;
@@ -42,11 +45,36 @@ async function start() {
   if (w2dData.qrData === undefined) w2dData.qrData = {};
   if (w2dData.audioData === undefined) w2dData.audioData = {};
   if (w2dData.audioEditorData === undefined) w2dData.audioEditorData = {};
+  if (w2dData.cmdsData === undefined) w2dData.cmdsData = {};
   w2dData.version = '1.0.1';
 
   console.log('Setting commands');
   Discord.setCommands(w2dData.guildId, [
-    { name: 'voice', description: 'Send Voice Audio to the chat' },
+    new SlashCommandBuilder()
+      .setName('voice')
+      .setDescription('Send voice audio to the chat'),
+    new SlashCommandBuilder()
+      .setName('chat')
+      .setDescription('Chat commands')
+      .addSubcommand(subcommand => subcommand
+        .setName('list')
+        .setDescription('List Whatsapp chats.')
+        .addIntegerOption(integerOption => integerOption
+          .setName('page')
+          .setDescription('Page number')
+          .setMinValue(0)
+          .setRequired(false)
+        )
+      )
+      .addSubcommand(subcommand => subcommand
+        .setName('load')
+        .setDescription('Load specific chat.')
+        .addIntegerOption(integerOption => integerOption
+          .setName('chat_id')
+          .setDescription('Chat id parameter')
+          .setRequired(true)
+        )
+      ),
   ]);
   
   console.log('Creating qr channel');
@@ -68,6 +96,11 @@ async function start() {
   const chatsChannel = new ChatsChannel(w2dData.guildId, w2dData.chatsData);
   chatsChannel.on('data changed', () => save());
   chatsChannel.setup();
+  
+  console.log('Creating cmds channel');
+  const cmdsChannel = new CmdsChannel(w2dData.guildId, chatsChannel, w2dData.cmdsData);
+  cmdsChannel.on('data changed', () => save());
+  cmdsChannel.setup();
 
   console.log('Finish!');
 }

@@ -82,8 +82,8 @@ export default class Whatsapp {
 
   public static async getMessagesAfterTimestampByChatId(chatId: string, timestamp: number) {
     await this.waitReady();
-    const earlierMessages = await this.client.loadEarlierMessages(chatId as any);
-    const loadedMessages = await this.client.getAllMessagesInChat(chatId as any, true, true);
+    const earlierMessages = await this.client.loadEarlierMessages(chatId as any) || [];
+    const loadedMessages = await this.client.getAllMessagesInChat(chatId as any, true, true) || [];
     const messages = earlierMessages.slice();
     const earlierIdsSet = new Set(earlierMessages.map(x=>x.id));
     loadedMessages.forEach(message => !earlierIdsSet.has(message.id) && messages.push(message));

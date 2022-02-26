@@ -1,6 +1,6 @@
 import { REST } from "@discordjs/rest";
 import { Awaitable, Client, ClientEvents, GuildChannelCreateOptions } from "discord.js";
-import { Routes } from "discord-api-types/v9";
+import { RESTPostAPIApplicationGuildCommandsJSONBody, Routes } from "discord-api-types/v9";
 
 export default class Discord {
   private static client: Client;
@@ -102,7 +102,7 @@ export default class Discord {
     } catch (exc) { }
   }
 
-  public static async setCommands(guildId: string, commands: {name: string, description: string}[]) {
+  public static async setCommands(guildId: string, commands: RESTPostAPIApplicationGuildCommandsJSONBody[]) {
     await this.rest.put(
       Routes.applicationGuildCommands(this.clientId, guildId),
       { body: commands },
