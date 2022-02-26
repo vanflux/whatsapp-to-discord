@@ -1,4 +1,5 @@
-import { ChatState, Client, create, Message } from "@open-wa/wa-automate";
+import { ChatState, Client, create } from "@open-wa/wa-automate";
+import { Message } from "@open-wa/wa-automate-types-only";
 
 export default class Whatsapp {
   private static client: Client;
@@ -92,7 +93,7 @@ export default class Whatsapp {
 
   public static async getMessageById(messageId: string) {
     await this.waitReady();
-    return await this.client.getMessageById(messageId as any);
+    return await this.client.getMessageById(messageId as any) as Message;
   }
 
   public static async getLastMessagesByChatId(chatId: string, count: number) {

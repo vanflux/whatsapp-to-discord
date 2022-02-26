@@ -7,6 +7,7 @@ deploy*.sh
 # @Open/WA files
 wa-session/
 .node-persist/
+logs/
 
 # managed
 **.data.json
