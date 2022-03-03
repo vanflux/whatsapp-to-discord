@@ -33,14 +33,14 @@ export default class Whatsapp {
     return new Promise(resolve => this.waitingReadyResolves.push(resolve));
   }
 
-  public static async onAnyMessage(fn: (message: Message) => void) {
+  public static async onAnyMessage(fn: (message: Message) => Promise<void>) {
     await this.waitReady();
-    this.client.onAnyMessage(fn);
+    this.client.onAnyMessage((...args) => fn(...args).catch(console.error));
   }
   
-  public static async onChatState(fn: (chatState: ChatState) => void) {
+  public static async onChatState(fn: (chatState: ChatState) => Promise<void>) {
     await this.waitReady();
-    this.client.onChatState(fn);
+    this.client.onChatState((...args) => fn(...args).catch(console.error));
   }
 
   public static async getAllChats() {
