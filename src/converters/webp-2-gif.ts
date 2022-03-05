@@ -10,6 +10,7 @@ export default class Webp2Gif {
   }
 
   public static async convert(buffer: Buffer) {
+    if (!Buffer.isBuffer(buffer)) return;
     return new Promise<Buffer|undefined>(resolve => {
       const id = Math.floor(Math.random() * 1000000000);
       console.log(`[Webp2Gif Converter] Convert, id: ${id}, in length: ${buffer.length}`);

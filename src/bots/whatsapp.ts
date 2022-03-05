@@ -1,5 +1,4 @@
-import { ChatState, Client, create } from "@open-wa/wa-automate";
-import { Message } from "@open-wa/wa-automate-types-only";
+import { ChatState, Client, create, decryptMedia, Message, MessageTypes } from "@open-wa/wa-automate";
 
 export default class Whatsapp {
   private static client: Client;
@@ -105,5 +104,12 @@ export default class Whatsapp {
     loadedMessages.forEach(message => !earlierIdsSet.has(message.id) && messages.push(message));
     if (messages.length <= count) return messages;
     return messages.slice(-count);
+  }
+
+  public static async decryptMedia(message: Message) {
+    // If someone have the insiders license and wants to decrypt stale media.
+    // I think the logic needs to be here.
+    // https://docs.openwa.dev/pages/How%20to/decrypt-media.html
+    return await decryptMedia(message);
   }
 }

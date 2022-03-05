@@ -1,4 +1,4 @@
-import { ChatState, decryptMedia, Message as WaMessage, MessageTypes } from "@open-wa/wa-automate";
+import { ChatState, Message as WaMessage, MessageTypes } from "@open-wa/wa-automate";
 import { ButtonInteraction, MessageActionRow, MessageAttachment, MessageButton, MessageEmbed, Message as DcMessage, TextChannel, Interaction, ReplyOptions, Typing } from "discord.js"
 import { extension } from "mime-types";
 import FileConverter from "../converters/file-converter";
@@ -134,7 +134,7 @@ export default class ChatChannel extends EventEmitter {
         switch(type) {
           case 'load_animated_sticker': {
             console.log('[Discord Interaction] load animated sticker request');
-            const fileBuffer = await decryptMedia(waMessage);
+            const fileBuffer = await Whatsapp.decryptMedia(waMessage);
             const fileName = `Sticker_Received_${this.nowDateStr()}.gif`;
             const buf = await Webp2Gif.convert(fileBuffer!);
             const attachment = new MessageAttachment(buf!, fileName);
@@ -149,7 +149,7 @@ export default class ChatChannel extends EventEmitter {
           case 'load_video': {
             console.log('[Discord Interaction] load video request');
             if (waMessage.mimetype) {
-              const fileBuffer = await decryptMedia(waMessage);
+              const fileBuffer = await Whatsapp.decryptMedia(waMessage);
               const fileExtension = extension(waMessage.mimetype);
               const fileName = `Video_Received_${this.nowDateStr()}.${fileExtension}`;
               const attachment = new MessageAttachment(fileBuffer!, fileName);
@@ -161,7 +161,7 @@ export default class ChatChannel extends EventEmitter {
           case 'load_document': {
             console.log('[Discord Interaction] load document request');
             if (waMessage.mimetype) {
-              const fileBuffer = await decryptMedia(waMessage);
+              const fileBuffer = await Whatsapp.decryptMedia(waMessage);
               const fileName = buttonInteraction.message?.embeds[0]?.fields?.find(field => field.name === 'Filename')?.value || 'unknown';
               const attachment = new MessageAttachment(fileBuffer!, fileName);
               await buttonInteraction.editReply({ embeds: [], files: [attachment], components: [] });
@@ -286,7 +286,7 @@ export default class ChatChannel extends EventEmitter {
     const fileFormat = mimetype && mimetype.includes('/') ? mimetype.split('/')[1].split(';')[0] : undefined;
     const fileExtension = mimetype ? extension(mimetype) : undefined;
     const hasFile = mimetype && fileFormat;
-    const fileBuffer = hasFile ? await decryptMedia(waMessage) : undefined;
+    const fileBuffer = hasFile ? await Whatsapp.decryptMedia(waMessage) : undefined;
     const fileSize = hasFile ? (fileBuffer ? fileBuffer.length : 0) : undefined;
     const fileIsOverLimit = hasFile ? fileSize! > 8 * 1000 * 1000 : false;
 
@@ -463,7 +463,11 @@ export default class ChatChannel extends EventEmitter {
         await this.channel?.send(`[BOT]: Too much messages, only the last ${oldMessagesLimit} are being shown.`);
       }
       for (let message of toSendMessages) {
-        await this.receiveWhatsappChatMessage(message);
+        try {
+          await this.receiveWhatsappChatMessage(message);
+        } catch (exc) {
+          console.error('send non received msgs, receive whatsapp chat message error', exc);
+        }
       }
     }
   }
