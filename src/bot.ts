@@ -6,8 +6,8 @@ import QrChannel, { QrData } from "./channels/qr-channel";
 import AudioChannel, { AudioData } from "./channels/audio-channel";
 import Webp2Gif from "./converters/webp-2-gif";
 import AudioEditorChannel, { AudioEditorData } from "./channels/audio-editor-channel";
-import { SlashCommandBuilder } from "@discordjs/builders";
 import CmdsChannel, { CmdsData } from "./channels/cmds-channel";
+import getCommandDocs from "./command-docs";
 
 export interface W2DData {
   version?: string;
@@ -49,33 +49,7 @@ async function start() {
   w2dData.version = '1.0.1';
 
   console.log('Setting commands');
-  Discord.setCommands(w2dData.guildId, [
-    new SlashCommandBuilder()
-      .setName('voice')
-      .setDescription('Send voice audio to the chat'),
-    new SlashCommandBuilder()
-      .setName('chat')
-      .setDescription('Chat commands')
-      .addSubcommand(subcommand => subcommand
-        .setName('list')
-        .setDescription('List Whatsapp chats.')
-        .addIntegerOption(integerOption => integerOption
-          .setName('page')
-          .setDescription('Page number')
-          .setMinValue(0)
-          .setRequired(false)
-        )
-      )
-      .addSubcommand(subcommand => subcommand
-        .setName('load')
-        .setDescription('Load specific chat.')
-        .addIntegerOption(integerOption => integerOption
-          .setName('chat_id')
-          .setDescription('Chat id parameter')
-          .setRequired(true)
-        )
-      ),
-  ]);
+  Discord.setCommands(w2dData.guildId, getCommandDocs());
   
   console.log('Creating qr channel');
   const qrChannel = new QrChannel(w2dData.guildId, w2dData.qrData);
