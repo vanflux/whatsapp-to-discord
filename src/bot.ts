@@ -46,7 +46,7 @@ async function start() {
   if (w2dData.audioData === undefined) w2dData.audioData = {};
   if (w2dData.audioEditorData === undefined) w2dData.audioEditorData = {};
   if (w2dData.cmdsData === undefined) w2dData.cmdsData = {};
-  w2dData.version = '1.0.1';
+  w2dData.version = '1.0.2';
 
   console.log('Setting commands');
   Discord.setCommands(w2dData.guildId, getCommandDocs());
