@@ -8,7 +8,23 @@ export interface PersistentChannelData {
 
 export type ChannelCreationOptionsSupplier = () => { channelName: string; options: GuildChannelCreateOptions };
 
-export default class PersistentChannel<T extends Channel> extends EventEmitter {
+interface PersistentChannelEvents {
+  'ready': () => void;
+  'channel changed': (channelId?: string) => void;
+  'channel created': (channelId?: string) => void;
+  'channel loaded': (channelId?: string) => void;
+}
+
+declare interface PersistentChannel<T extends Channel> {
+  on<U extends keyof PersistentChannelEvents>(
+    event: U, listener: PersistentChannelEvents[U]
+  ): this;
+  emit<U extends keyof PersistentChannelEvents>(
+    event: U, ...args: Parameters<PersistentChannelEvents[U]>
+  ): boolean;
+}
+
+class PersistentChannel<T extends Channel> extends EventEmitter {
   private guildId: string;
   private channel: T|undefined;
   private ready = false;
@@ -29,7 +45,7 @@ export default class PersistentChannel<T extends Channel> extends EventEmitter {
     if (!this.channelId) await this.createNewChannel();
     if (!this.channelId) return false;
 
-    await Discord.on('channelDelete', channel => this.handleDiscordChannelDelete(channel));
+    await Discord.on('channelDelete', this.handleDiscordChannelDelete.bind(this));
 
     this.ready = true;
     this.emit('ready');
@@ -72,3 +88,5 @@ export default class PersistentChannel<T extends Channel> extends EventEmitter {
     await this.createNewChannel();
   }
 }
+
+export default PersistentChannel;

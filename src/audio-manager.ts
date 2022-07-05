@@ -25,10 +25,6 @@ export default class AudioManager {
     this.audioBuffers[0] = newAudioBuffer;
   }
 
-  public static getDataUrl(audioBuffer: Buffer) {
-    return `data:audio/mp3;base64,${audioBuffer.toString('base64')}`;
-  }
-
   public static on(event: 'audio_added', listener: (audioBuffer: Buffer) => void): void;
   public static on(event: any, listener: (...args: any[]) => void): void {
     this.eventEmitter.on(event, listener);

@@ -26,13 +26,14 @@ export default class ChatsChannel extends EventEmitter {
 
   constructor(guildId: string, chatsData: ChatsData) {
     super();
+    this.setMaxListeners(0);
     this.guildId = guildId;
 
     this.chatsData = chatsData;
     if (this.chatDatas === undefined) this.chatDatas = [];
       
     this.persistentChannel = new PersistentChannel(this.guildId, this.chatsData.channelId, () => ({ channelName, options: { type: 'GUILD_CATEGORY' } }));
-    this.persistentChannel.on('channel changed', (newChannelId: string) => this.handleChannelChanged(newChannelId));
+    this.persistentChannel.on('channel changed', this.handleChannelChanged.bind(this));
   }
 
   public async setup() {
@@ -69,7 +70,7 @@ export default class ChatsChannel extends EventEmitter {
     return await Whatsapp.getChatById(waChatId);
   }
 
-  private handleChannelChanged(newChannelId: string) {
+  private handleChannelChanged(newChannelId?: string) {
     this.chatsData.channelId = newChannelId;
     this.sync();
     this.emit('data changed', this.chatsData);

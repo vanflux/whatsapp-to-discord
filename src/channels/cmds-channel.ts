@@ -29,7 +29,7 @@ export default class CmdsChannel extends EventEmitter {
     this.chatsChannel = chatsChannel;
     this.cmdsData = cmdsData;
     this.persistentChannel = new PersistentChannel(this.guildId, this.cmdsData.channelId, () => ({ channelName, options: { type: 'GUILD_TEXT', topic: channelTopic } }));
-    this.persistentChannel.on('channel created', (newChannelId: string) => this.handleChannelCreated(newChannelId));
+    this.persistentChannel.on('channel created', this.handleChannelCreated.bind(this));
   }
 
   public async setup() {
@@ -43,7 +43,7 @@ export default class CmdsChannel extends EventEmitter {
     return true;
   }
   
-  private handleChannelCreated(newChannelId: string) {
+  private handleChannelCreated(newChannelId?: string) {
     this.cmdsData.channelId = newChannelId;
     this.emit('data changed', this.cmdsData);
   }
@@ -68,7 +68,7 @@ export default class CmdsChannel extends EventEmitter {
             .setDescription(description);
             await interaction.editReply({ embeds: [embed] });
             break;
-        }
+          }
           case 'load': {
             const embed = new MessageEmbed().setTitle('Chat Load');
             const inputId = interaction.options.getInteger('chat_id');

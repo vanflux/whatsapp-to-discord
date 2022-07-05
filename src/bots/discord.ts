@@ -60,15 +60,17 @@ export default class Discord {
     return new Promise(resolve => this.waitingReadyResolves.push(resolve));
   }
 
-  public static async on<K extends keyof ClientEvents>(event: K, listener: (...args: ClientEvents[K]) => Awaitable<void>) {
+  public static async on<K extends keyof ClientEvents>(event: K, listener: (...args: ClientEvents[K]) => Awaitable<void>): Promise<()=>any> {
     await this.waitReady();
-    this.client.on(event, async (...args) => {
+    const handler = async (...args: any) => {
       try {
         await listener(...args);
       } catch (exc) {
         console.error(`Discord on ${event} error`, exc);
       }
-    });
+    };
+    this.client.on(event, handler);
+    return () => this.client.off(event, handler);
   }
 
   public static async getFirstGuildId() {
