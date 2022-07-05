@@ -21,6 +21,12 @@ export interface W2DData {
 
 let w2dData: W2DData|undefined;
 
+/*
+
+1.0.0 - 1.0.3 are compatible
+
+*/
+
 async function start() {
   if(!await Webp2Gif.checkMagickExists()) return console.log('ImageMagick CLI is missing!');
   
@@ -46,7 +52,7 @@ async function start() {
   if (w2dData.audioData === undefined) w2dData.audioData = {};
   if (w2dData.audioEditorData === undefined) w2dData.audioEditorData = {};
   if (w2dData.cmdsData === undefined) w2dData.cmdsData = {};
-  w2dData.version = '1.0.2';
+  w2dData.version = '1.0.3';
 
   console.log('Setting commands');
   Discord.setCommands(w2dData.guildId, getCommandDocs());

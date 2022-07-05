@@ -1,6 +1,6 @@
 {
   "name": "w2d",
-  "version": "1.0.0",
+  "version": "1.0.3",
   "description": "Use whatsapp through discord.",
   "main": "src/app.ts",
   "scripts": {

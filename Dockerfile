@@ -11,6 +11,8 @@ RUN npm ci --ignore-scripts --no-optional
 # "sharp" and "opusscript" installation are necessary.
 RUN npm --no-save i sharp opusscript
 
-COPY . .
+COPY tsconfig.json .
+COPY assets/ assets/
+COPY src/ src/
 RUN npm run build
 ENTRYPOINT ["node", "dist/app"]
