@@ -1,10 +1,64 @@
 # W2D (Whatsapp to Discord)
 
-Use Whatsapp through Discord.
+Use Whatsapp through Discord v1.0.3.
+
+[FEATURES](#features)
 
 This project is build on top of @open-wa/wa-automate and discord.js.<br>
 https://www.npmjs.com/package/@open-wa/wa-automate<br>
 https://www.npmjs.com/package/discord.js<br>
+
+## Before Usage
+
+- Create an application and a bot on discord developer website.
+- Create an server for you (and **ONLY YOU!!!**).
+- Add the bot to the server with scopes `bot` and `applications.commands` and with bot permissions `Administrator`.
+- Get the discord bot token and client id.
+
+---
+
+## Usage (docker)
+
+- Firstly, do the the things of `Before Usage` section.
+- Install docker if you havent.
+- Run the following command to start the bot:
+
+Replace the discord tokens and client ids<br>
+Replace the path to the state, I recommend to put the absolute path of project root + "/state" (eg.: Project path: "/usr/w2d", State: "/usr/w2d/state")
+
+```
+docker run --rm -it -e DISCORD_BOT_TOKEN={YOUR_BOT_TOKEN} -e DISCORD_BOT_CLIENT_ID={YOUR_BOT_CLIENT_ID} -e WA_EXECUTABLE_PATH="/usr/bin/chromium-browser" -e WA_HEADLESS=true -v {PATH_TO_SAVE_STATE}:/app/state vanflux/w2d
+```
+
+- Now, go to the discord server and scan the qrcode.
+
+Every time you run the command you will need to scan the code again because of an integrity check fail problem.
+
+---
+
+## Usage (development)
+
+- Firstly, do the the things of `Before Usage` section.
+- Ensure that your node version is **16.6.0** or newer 
+- Install image magick and(for windows users) add to the environment path vars.
+- Install ffmpeg and(for windows users) add to the environment path vars.
+- Create a `.env` file on the project root and write the following:
+```
+DISCORD_BOT_TOKEN={YOUR_BOT_TOKEN}
+DISCORD_BOT_CLIENT_ID={YOUR_BOT_CLIENT_ID}
+```
+- Run `npm i` to install dependencies.
+- Run the bot with `npm start`, scan the qr code and enjoy.
+
+---
+
+## Building docker image from source
+
+- Clone this project.
+- Run `docker build -t w2d --network host .`
+
+---
+
 
 ## Features
 
@@ -65,52 +119,6 @@ You only can send texts, images and audios.
 - Receive Gif
 
 ![](screenshots/gif-receiving.png)
-
----
-
-## Before Usage
-
-- Create an application and a bot on discord developer website.
-- Create an server for you (and **ONLY YOU!!!**).
-- Add the bot to the server with scopes `bot` and `applications.commands` and with bot permissions `Administrator`.
-- Get the discord bot token and client id.
-
----
-
-## Usage (non-development)
-
-- Firstly, do the the things of `Before Usage` section.
-- Clone this project.
-- Install docker if you havent.
-- Run `docker build -t w2d --network host .` to build the image.
-- Run the following command to start the bot:
-
-Replace the discord tokens and client ids<br>
-Replace the path to the state, I recommend to put the absolute path of project root + "/state" (eg.: Project path: "/usr/w2d", State: "/usr/w2d/state")
-
-```
-docker run --rm -it -e DISCORD_BOT_TOKEN={YOUR_BOT_TOKEN} -e DISCORD_BOT_CLIENT_ID={YOUR_BOT_CLIENT_ID} -e WA_EXECUTABLE_PATH="/usr/bin/chromium-browser" -e WA_HEADLESS=true -v {PATH_TO_SAVE_STATE}:/app/state w2d
-```
-
-- Now, go to the discord server and scan the qrcode.
-
-Every time you run the command you will need to scan the code again because of an integrity check fail problem.
-
----
-
-## Usage (development)
-
-- Firstly, do the the things of `Before Usage` section.
-- Ensure that your node version is **16.6.0** or newer with 
-- Install image magick and(for windows users) add to the environment path vars.
-- Install ffmpeg and(for windows users) add to the environment path vars.
-- Create a `.env` file on the project root and write the following:
-```
-DISCORD_BOT_TOKEN={YOUR_BOT_TOKEN}
-DISCORD_BOT_CLIENT_ID={YOUR_BOT_CLIENT_ID}
-```
-- Run `npm i` to install dependencies.
-- Run the bot with `npm start`, scan the qr code and enjoy.
 
 ---
 
