@@ -1,6 +1,9 @@
 # W2D (Whatsapp to Discord)
 
-Use Whatsapp through Discord v1.0.3.
+![](https://img.shields.io/github/v/release/vanflux/whatsapp-to-discord)
+![](https://img.shields.io/docker/image-size/vanflux/w2d)
+
+Use Whatsapp through Discord
 
 [FEATURES](#features)
 

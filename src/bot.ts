@@ -23,11 +23,13 @@ let w2dData: W2DData|undefined;
 
 /*
 
-1.0.0 - 1.0.3 are compatible
+1.0.0 - 1.0.4 are compatible
 
 */
 
 async function start() {
+  registerGlobalUncaughtExceptionHandler();
+
   if(!await Webp2Gif.checkMagickExists()) return console.log('ImageMagick CLI is missing!');
   
   console.log('Loading data');
@@ -52,7 +54,7 @@ async function start() {
   if (w2dData.audioData === undefined) w2dData.audioData = {};
   if (w2dData.audioEditorData === undefined) w2dData.audioEditorData = {};
   if (w2dData.cmdsData === undefined) w2dData.cmdsData = {};
-  w2dData.version = '1.0.3';
+  w2dData.version = require('../package.json').version;
 
   console.log('Setting commands');
   Discord.setCommands(w2dData.guildId, getCommandDocs());
@@ -83,6 +85,12 @@ async function start() {
   cmdsChannel.setup();
 
   console.log('Finish!');
+}
+
+function registerGlobalUncaughtExceptionHandler() {
+  process.on('uncaughtException', err => {
+    console.error('Caught exception:', err);
+  });
 }
 
 function load() {
