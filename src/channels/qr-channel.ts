@@ -1,7 +1,7 @@
 import { Message as DcMessage, MessageEmbed, MessageAttachment, TextChannel } from "discord.js";
 import { ev } from '@open-wa/wa-automate';
 import EventEmitter from "events";
-import PersistentChannel from "../persistent-channel";
+import PersistentChannel from "./persistent-channel";
 
 const channelName = '⚫qr-code⚪';
 const channelTopic = 'Qr Code Channel';

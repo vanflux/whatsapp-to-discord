@@ -8,6 +8,7 @@ import Webp2Gif from "./converters/webp-2-gif";
 import AudioEditorChannel, { AudioEditorData } from "./channels/audio-editor-channel";
 import CmdsChannel, { CmdsData } from "./channels/cmds-channel";
 import getCommandDocs from "./command-docs";
+import { BirthdaysData, BirthdayService } from "./services/birthday-service";
 
 export interface W2DData {
   version?: string;
@@ -17,13 +18,14 @@ export interface W2DData {
   audioData?: AudioData;
   audioEditorData?: AudioEditorData;
   cmdsData?: CmdsData;
+  birthdaysData?: BirthdaysData;
 }
 
 let w2dData: W2DData|undefined;
 
 /*
 
-1.0.0 - 1.0.4 are compatible
+1.0.0 - 1.1.0 are compatible
 
 */
 
@@ -54,6 +56,7 @@ async function start() {
   if (w2dData.audioData === undefined) w2dData.audioData = {};
   if (w2dData.audioEditorData === undefined) w2dData.audioEditorData = {};
   if (w2dData.cmdsData === undefined) w2dData.cmdsData = {};
+  if (w2dData.birthdaysData === undefined) w2dData.birthdaysData = {};
   w2dData.version = require('../package.json').version;
 
   console.log('Setting commands');
@@ -83,6 +86,9 @@ async function start() {
   const cmdsChannel = new CmdsChannel(w2dData.guildId, chatsChannel, w2dData.cmdsData);
   cmdsChannel.on('data changed', () => save());
   cmdsChannel.setup();
+
+  BirthdayService.setData(w2dData.birthdaysData);
+  BirthdayService.on('data changed', () => save());
 
   console.log('Finish!');
 }

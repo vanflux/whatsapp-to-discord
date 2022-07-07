@@ -1,11 +1,12 @@
 import { ButtonInteraction, Interaction, MessageAttachment, MessageEmbed } from "discord.js";
 import EventEmitter from "events";
 import { extension } from "mime-types";
-import AudioManager from "../../audio-manager";
+import AudioManager from "../../services/audio-manager";
 import Whatsapp, { WaSendMessagePayload } from "../../bots/whatsapp";
 import Webp2Gif from "../../converters/webp-2-gif";
 import { bufferToMp3DataUrl, nameFromContact, nowDateStr, pictureFromContact } from "../../functions";
 import DcLocation from "./dc-location";
+import { BirthdayService } from "../../services/birthday-service";
 
 interface InteractionHandlerEvents {
   'send message request': (opts: WaSendMessagePayload) => void;
@@ -22,11 +23,13 @@ declare interface InteractionHandler {
 
 class InteractionHandler extends EventEmitter {
   private dcLocation: DcLocation;
+  private waChatId: string;
   private dcMsgIdToWaMsgId: (waMsgId: string) => string|undefined;
 
-  constructor(dcMsgIdToWaMsgId: (waMsgId: string) => string|undefined) {
+  constructor(dcMsgIdToWaMsgId: (waMsgId: string) => string|undefined, waChatId: string) {
     super();
     this.dcLocation = new DcLocation();
+    this.waChatId = waChatId;
     this.dcMsgIdToWaMsgId = dcMsgIdToWaMsgId;
   }
 
@@ -115,6 +118,40 @@ class InteractionHandler extends EventEmitter {
         interaction.reply('Success!');
         const audioBase64 = bufferToMp3DataUrl(mp3AudioBuffer);
         this.emit('send message request', { type: 'voice', file: audioBase64 });
+      } else if (interaction.commandName === 'birthday') {
+        switch (interaction.options.getSubcommand()) {
+          case 'set':
+            const dateStr = interaction.options.getString('date');
+            if (!dateStr?.match(/^\d\d?\/\d\d?$/)) {
+              interaction.reply('Invalid date, use DD/MM format');
+            } else {
+              const day = Number(dateStr.split('/')[0]);
+              const month = Number(dateStr.split('/')[1]);
+              const name = interaction.options.getString('name')!;
+              const message = interaction.options.getString('message')!;
+              BirthdayService.addBirthday({ waChatId: this.waChatId, day, month, name, message });
+              interaction.reply(`Birthday of "${name}" registered at ${day}/${month}!`);
+            }
+            break;
+          case 'delete':
+            const name = interaction.options.getString('name')!;
+            if (BirthdayService.deleteBirthday(this.waChatId, name)) {
+              interaction.reply(`Birthday of "${name}" deleted!`);
+            } else {
+              interaction.reply(`Birthday of "${name}" already doesnt exist!`);
+            }
+            break;
+          case 'list':
+            const birthdays = BirthdayService.getBirthdays(this.waChatId);
+            const description = birthdays.map((birthday, index) => {
+              return `${index+1}. ${birthday.name} on ${birthday.day}/${birthday.month}`;
+            }).join('\n');
+            const embed = new MessageEmbed()
+            .setTitle('Birthday List')
+            .setDescription(description);
+            interaction.reply({ embeds: [embed] });
+            break;
+        }
       }
     }
   }

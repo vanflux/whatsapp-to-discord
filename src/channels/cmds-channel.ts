@@ -3,7 +3,7 @@ import EventEmitter from "events";
 import Discord from "../bots/discord";
 import Whatsapp from "../bots/whatsapp";
 import { nameFromChat } from "../functions";
-import PersistentChannel from "../persistent-channel";
+import PersistentChannel from "./persistent-channel";
 import ChatsChannel from "./chats-channel";
 
 const channelName = '🟢cmds🟢';

@@ -6,8 +6,8 @@ import { WritableStreamBuffer } from "stream-buffers";
 import { pipeline } from "stream";
 import FileConverter from "../converters/file-converter";
 import { opus } from "prism-media";
-import AudioManager from "../audio-manager";
-import PersistentChannel from "../persistent-channel";
+import AudioManager from "../services/audio-manager";
+import PersistentChannel from "./persistent-channel";
 
 const channelName = '🔉audio🔉';
 const channelTopic = 'Audio Channel';
@@ -39,7 +39,7 @@ export default class AudioChannel extends EventEmitter {
     if (this.ready) return true;
     if (!await this.persistentChannel.setup()) return false;
 
-    await Discord.on('voiceStateUpdate', (oldVoiceState, newVoiceState) => this.handleVoiceStateUpdate(oldVoiceState, newVoiceState));
+    await Discord.on('voiceStateUpdate', this.handleVoiceStateUpdate.bind(this));
 
     this.ready = true;
     this.emit('ready');

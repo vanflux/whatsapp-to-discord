@@ -2,7 +2,7 @@ import { Message as WaMessage } from "@open-wa/wa-automate";
 import { CategoryChannel } from "discord.js";
 import EventEmitter from "events";
 import Whatsapp from "../bots/whatsapp";
-import PersistentChannel from "../persistent-channel";
+import PersistentChannel from "./persistent-channel";
 import ChatChannel, { ChatData } from "./chat-channel";
 
 const channelName = '💬Chats💬';

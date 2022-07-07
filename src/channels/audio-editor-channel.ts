@@ -1,9 +1,9 @@
 import { Message as DcMessage, TextChannel, MessageAttachment, MessageEmbed, MessageReaction, User, PartialMessageReaction, PartialUser } from "discord.js";
 import Discord from "../bots/discord";
 import EventEmitter from "events";
-import AudioManager from "../audio-manager";
+import AudioManager from "../services/audio-manager";
 import AudioManipulation from "../converters/audio-manipulation";
-import PersistentChannel from "../persistent-channel";
+import PersistentChannel from "./persistent-channel";
 
 const channelName = '🔉audio-editor🎨';
 const channelTopic = 'Audio Editor Channel';

@@ -3,7 +3,7 @@ import { Message as DcMessage, TextChannel, Interaction, Typing, MessageOptions 
 import Discord from "../../bots/discord";
 import Whatsapp, { WaSendMessagePayload } from "../../bots/whatsapp";
 import EventEmitter from "events";
-import PersistentChannel from "../../persistent-channel";
+import PersistentChannel from "../persistent-channel";
 import { descriptionFromChat, nameFromChat, sanitizeChatDescription, sanitizeChatName } from "../../functions";
 import RecvMessageHandler from "./recv-message-handler";
 import SendMessageHandler from "./send-message-handler";
@@ -53,7 +53,7 @@ export default class ChatChannel extends EventEmitter {
     }));
     this.recvMessageHandler = new RecvMessageHandler(this.getDcMsgIdByWaMsgId.bind(this));
     this.sendMessageHandler = new SendMessageHandler();
-    this.interactionHandler = new InteractionHandler(this.getWaMsgIdByDcMsgId.bind(this));
+    this.interactionHandler = new InteractionHandler(this.getWaMsgIdByDcMsgId.bind(this), this.waChatId);
 
     this.persistentChannel.on('channel created', this.handleChannelCreated.bind(this));
     this.persistentChannel.on('channel loaded', this.handleChannelLoaded.bind(this));

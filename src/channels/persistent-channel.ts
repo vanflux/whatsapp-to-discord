@@ -1,6 +1,6 @@
 import { Channel, GuildChannelCreateOptions } from "discord.js";
 import EventEmitter from "events";
-import Discord from "./bots/discord";
+import Discord from "../bots/discord";
 
 export interface PersistentChannelData {
   channelId: string|undefined;

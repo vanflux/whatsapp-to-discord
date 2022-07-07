@@ -7,7 +7,7 @@ Use Whatsapp through Discord
 
 [FEATURES](#features)
 
-This project is build on top of @open-wa/wa-automate and discord.js.<br>
+This project is built on top of @open-wa/wa-automate and discord.js.<br>
 https://www.npmjs.com/package/@open-wa/wa-automate<br>
 https://www.npmjs.com/package/discord.js<br>
 
@@ -26,11 +26,13 @@ https://www.npmjs.com/package/discord.js<br>
 - Install docker if you havent.
 - Run the following command to start the bot:
 
-Replace the discord tokens and client ids<br>
-Replace the path to the state, I recommend to put the absolute path of project root + "/state" (eg.: Project path: "/usr/w2d", State: "/usr/w2d/state")
+Replace `YOUR_BOT_TOKEN` and `YOUR_BOT_CLIENT_ID` with your bot token/client id.<br>
+Replace `PATH_TO_SAVE_STATE` with a path to the state directory, I recommend to put the absolute path of project root + "/state" (eg.: Project path: "/usr/w2d", State: "/usr/w2d/state")<br>
+Replace `TIMEZONE` by your own timezone, [here you can find the available values for](https://gist.github.com/diogocapela/12c6617fc87607d11fd62d2a4f42b02a).<br>
+Optionally customize the birthday check interval(in milliseconds) using the environment variable `BIRTHDAY_CHECK_INTERVAL`.
 
 ```
-docker run --rm -it -e DISCORD_BOT_TOKEN={YOUR_BOT_TOKEN} -e DISCORD_BOT_CLIENT_ID={YOUR_BOT_CLIENT_ID} -e WA_EXECUTABLE_PATH="/usr/bin/chromium-browser" -e WA_HEADLESS=true -v {PATH_TO_SAVE_STATE}:/app/state vanflux/w2d
+docker run --rm -it -e DISCORD_BOT_TOKEN={YOUR_BOT_TOKEN} -e DISCORD_BOT_CLIENT_ID={YOUR_BOT_CLIENT_ID} -e WA_EXECUTABLE_PATH="/usr/bin/chromium-browser" -e WA_HEADLESS=true -e TZ={TIMEZONE} -v {PATH_TO_SAVE_STATE}:/app/state vanflux/w2d
 ```
 
 - Now, go to the discord server and scan the qrcode.
