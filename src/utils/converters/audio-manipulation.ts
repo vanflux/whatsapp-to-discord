@@ -1,6 +1,6 @@
 import { spawn } from "child_process";
 
-export default class AudioManipulation {
+export class AudioManipulation {
   public static async concat(mp3AudioBuffer: Buffer, mp3AudioUrl: string) {
     return new Promise<Buffer|undefined>(resolve => {
       const id = Math.floor(Math.random() * 1000000000);

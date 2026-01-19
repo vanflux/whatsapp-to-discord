@@ -1,19 +1,17 @@
 {
   "compilerOptions": {
     "target": "ES2021",
-    "module": "CommonJS",
+    "module": "commonjs",
     "moduleResolution": "Node",
-    "rootDir": "./src",
     "resolveJsonModule": true,
     "outDir": "./dist",
     "removeComments": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
+    "verbatimModuleSyntax": false,
+    "strictNullChecks": true,
     "strict": true,
     "noImplicitAny": true,
     "skipLibCheck": true
-  },
-  "ts-node": {
-    "files": true,
   }
 }

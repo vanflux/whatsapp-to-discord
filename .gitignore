@@ -3,11 +3,8 @@ state*/
 dist/
 .env
 deploy*.sh
-
-# @Open/WA files
-wa-session/
-.node-persist/
-logs/
+.data
+*.log
 
 # managed
 **.data.json

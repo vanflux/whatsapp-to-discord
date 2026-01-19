@@ -1,19 +1,15 @@
-import { Chat, Contact } from "@open-wa/wa-automate";
+import { Chat, Contact } from "@whiskeysockets/baileys";
 
 export function nameFromChat(chat: Chat) {
-  return  (chat?.contact?.formattedName?.startsWith('+') ? chat?.contact?.pushname : chat?.contact?.formattedName)
-          || chat?.formattedTitle
-          || chat?.name
-          || 'unknown';
+  return chat.displayName ?? chat.name ?? chat.username ?? 'unknown';
 }
 
 export function pictureFromContact(contact: Contact) {
-  return contact?.profilePicThumbObj?.img;
+  return contact?.imgUrl;
 }
 
 export function nameFromContact(contact: Contact) {
-  return  (contact?.formattedName?.startsWith('+') ? contact?.pushname : contact?.formattedName)
-          || 'unknown';
+  return contact.name ?? contact.verifiedName ?? contact.phoneNumber ?? 'unknown';
 }
 
 export function descriptionFromChat(chat: Chat) {

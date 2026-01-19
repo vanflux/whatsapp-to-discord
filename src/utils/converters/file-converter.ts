@@ -1,6 +1,6 @@
 import { spawn } from "child_process";
 
-export default class FileConverter {
+export class FileConverter {
   public static async convert(inputBuffer: Buffer, inputFormat: string|undefined, outputFormat: string|undefined, inputOptions: string[]=[], outputOptions: string[]=[]) {
     return new Promise<Buffer|undefined>(resolve => {
       const id = Math.floor(Math.random() * 1000000000);
@@ -21,31 +21,11 @@ export default class FileConverter {
         resolve(Buffer.concat(buffers));
       });
       proc.stdout.on('data', buffer => buffers.push(buffer));
-      proc.stderr.on('data', ()=>{});
+      proc.stderr.on('data', data => {
+        console.log('[File Converter] Err: ', Buffer.from(data).toString());
+      });
       proc.stdin.write(inputBuffer);
       proc.stdin.end();
     });
-
-    // For some unknown reason, fluent-ffmpeg is SOOO slow
-    /*return await new Promise<Buffer|undefined>(resolve => {
-      const readable = new ReadableStreamBuffer();
-      readable.put(inputBuffer);
-      readable.stop();
-
-      const writable = new WritableStreamBuffer();
-      writable.on('finish', () => {
-        const buf = writable.getContents();
-        if (buf) {
-          resolve(buf);
-        } else {
-          resolve(undefined);
-        }
-      });
-      
-      Ffmpeg()
-      .input(readable).inputOptions(inputOptions).inputFormat(inputFormat)
-      .output(writable).outputOptions(outputOptions).outputFormat(outputFormat)
-      .run();
-    });*/
   }
 }
